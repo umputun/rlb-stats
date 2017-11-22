@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/umputun/rlb-stats/app/parse"
 )
 
-var bucket = []byte("stats")
+var bucketCandles = []byte("stats")
+var bucketLogs = []byte("raw_logs")
 
 // Bolt implements store.Engine with boltdb
 type Bolt struct {
@@ -22,7 +24,11 @@ func NewBolt(dbFile string, collectDuration time.Duration) (*Bolt, error) {
 	result := Bolt{}
 	db, err := bolt.Open(dbFile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	db.Update(func(tx *bolt.Tx) error {
-		_, e := tx.CreateBucketIfNotExists(bucket)
+		_, e := tx.CreateBucketIfNotExists(bucketCandles)
+		return e
+	})
+	db.Update(func(tx *bolt.Tx) error {
+		_, e := tx.CreateBucketIfNotExists(bucketLogs)
 		return e
 	})
 	result.db = db
@@ -31,11 +37,11 @@ func NewBolt(dbFile string, collectDuration time.Duration) (*Bolt, error) {
 }
 
 // Save with ts-ip as a key. ts prefix for bolt range query
-func (s *Bolt) Save(entry *LogEntry) (err error) {
+func (s *Bolt) Save(entry *parse.LogEntry) (err error) {
 	key := fmt.Sprintf("%d-%s", entry.Date.Unix(), entry.SourceIP)
 	total := 0
 	err = s.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket)
+		b := tx.Bucket(bucketLogs)
 		total = b.Stats().KeyN
 		jdata, jerr := json.Marshal(entry)
 		if jerr != nil {
@@ -50,7 +56,7 @@ func (s *Bolt) Save(entry *LogEntry) (err error) {
 
 // Load by period
 func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err error) {
-	// TODO: collect data for period, convert raw entries to candles, return candles
+	// TODO: collect data for period, return candles
 	return result, err
 }
 
