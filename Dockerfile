@@ -5,10 +5,6 @@ ADD . /go/src/github.com/umputun/rlb-stats
 
 WORKDIR /go/src/github.com/umputun/rlb-stats
 
-# TODO: move external dependencies to vendor folder
-RUN go get github.com/boltdb/bolt
-RUN go get github.com/stretchr/testify
-
 RUN go test ./app/... && \
     CGO_ENABLED=0 GOOS=linux go build -o rlb-stats -ldflags "-X main.revision=$(git rev-parse --abbrev-ref HEAD)-$(git describe --abbrev=7 --always --tags)-$(date +%Y%m%d-%H:%M:%S)" ./app
 
