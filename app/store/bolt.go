@@ -18,7 +18,7 @@ type Bolt struct {
 	db *bolt.DB
 }
 
-// NewBolt makes persitent boltdb based store
+// NewBolt makes persistent boltdb based store
 func NewBolt(dbFile string, collectDuration time.Duration) (*Bolt, error) {
 	log.Printf("[INFO] bolt (persitent) store, %s", dbFile)
 	result := Bolt{}
@@ -32,7 +32,7 @@ func NewBolt(dbFile string, collectDuration time.Duration) (*Bolt, error) {
 		return e
 	})
 	result.db = db
-	result.activateCollecter(collectDuration)
+	result.activateCollector(collectDuration)
 	return &result, err
 }
 
@@ -55,17 +55,24 @@ func (s *Bolt) Save(entry *parse.LogEntry) (err error) {
 }
 
 // Load by period
+func (s *Bolt) loadLogEntry(periodStart, periodEnd time.Time) (result []parse.LogEntry, err error) {
+	// TODO: collect data for period, return entries
+	result = append(result, parse.LogEntry{})
+	return
+}
+
+// Load by period
 func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err error) {
 	// TODO: collect data for period, return candles
-	return result, err
+	return
 }
 
 // TODO: write logEntry->candle function
 // TODO: dedupe same ips in candle (by which rule?)
 
-// activateCollecter runs periodic cleanups to aggregate data into candles
+// activateCollector runs periodic cleanups to aggregate data into candles
 // detection based on ts (unix time) prefix of the key.
-func (s *Bolt) activateCollecter(every time.Duration) {
+func (s *Bolt) activateCollector(every time.Duration) {
 	log.Printf("[INFO] collecter activated, every %v", every)
 
 	ticker := time.NewTicker(every)
