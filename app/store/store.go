@@ -21,5 +21,5 @@ type Candle struct {
 // Engine defines interface to save log entries and load candels
 type Engine interface {
 	Save(msg *parse.LogEntry) (err error)
-	Load(periodStart, periodEnd time.Time) (result []Candle, err error)
+	Load(periodStart, periodEnd time.Time) (result []*Candle, err error)
 }

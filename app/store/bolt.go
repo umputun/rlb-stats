@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	"bytes"
+
 	"github.com/boltdb/bolt"
 	"github.com/umputun/rlb-stats/app/parse"
 )
@@ -50,20 +52,55 @@ func (s *Bolt) Save(entry *parse.LogEntry) (err error) {
 		return b.Put([]byte(key), jdata)
 	})
 
-	log.Printf("[DEBUG] saved, time=%v, total=%d", entry.Date, total+1)
+	log.Printf("[DEBUG] saved, time=%v, total=%d", entry.Date.Unix(), total+1)
 	return err
 }
 
-// Load by period
-func (s *Bolt) loadLogEntry(periodStart, periodEnd time.Time) (result []parse.LogEntry, err error) {
-	// TODO: collect data for period, return entries
-	result = append(result, parse.LogEntry{})
+// Load LogEntries by period
+func (s *Bolt) loadLogEntry(periodStart, periodEnd time.Time) (result []*parse.LogEntry, err error) {
+
+	s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucketLogs)
+		c := b.Cursor()
+
+		// ip just a place holder to make keys sorted properly by ts prefix
+		min := []byte(fmt.Sprintf("%d-127.0.0.1", periodStart.Unix()))
+		max := []byte(fmt.Sprintf("%d-127.0.0.1", periodEnd.Unix()))
+
+		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
+			log.Printf("[DEBUG] found entry %s", string(k))
+			entry := &parse.LogEntry{}
+			json.Unmarshal(b.Get(k), entry)
+			result = append(result, entry)
+			_ = v
+		}
+
+		return nil
+	})
+
 	return
 }
 
-// Load by period
-func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err error) {
-	// TODO: collect data for period, return candles
+// Load Candles by period
+func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []*Candle, err error) {
+	s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucketCandles)
+		c := b.Cursor()
+
+		min := []byte(fmt.Sprintf("%d", periodStart.Unix()))
+		max := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
+
+		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
+			log.Printf("[DEBUG] found candle %s", string(k))
+			entry := &Candle{}
+			json.Unmarshal(b.Get(k), entry)
+			result = append(result, entry)
+			_ = v
+		}
+
+		return nil
+	})
+
 	return
 }
 
