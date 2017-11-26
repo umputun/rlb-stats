@@ -20,10 +20,10 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 		AnswerTime:      time.Second,
 		Date:            time.Now().Round(0), // Round to drop monotonic clock, https://tip.golang.org/pkg/time/#hdr-Monotonic_Clocks
 	}
-	assert.Nil(t, s.Save(&logEntry), "saved fine")
+	assert.Nil(t, s.Save(logEntry), "saved fine")
 	savedEntry, err := s.loadLogEntry(time.Now(), time.Now().Add(time.Second))
 	assert.Nil(t, err, "key found")
-	assert.EqualValues(t, &logEntry, savedEntry[0], "matches loaded msg")
+	assert.EqualValues(t, logEntry, savedEntry[0], "matches loaded msg")
 
 	os.Remove("/tmp/test.bd")
 }
