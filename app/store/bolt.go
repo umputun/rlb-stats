@@ -76,6 +76,7 @@ func (s *Bolt) loadLogEntry(periodStart, periodEnd time.Time) (result []parse.Lo
 			log.Printf("[DEBUG] found entry %s", string(k))
 			entry := parse.LogEntry{}
 			json.Unmarshal(v, &entry)
+			entry.Date = entry.Date.In(time.Local)
 			result = append(result, entry)
 			_ = v
 		}
@@ -146,6 +147,7 @@ func (s *Bolt) entriesToCandles(entries []parse.LogEntry) {
 
 	//existingCandles, _ := s.Load(startTime, endTime)
 	//newCandles := []Candle
+	// TODO write actual entries to candles logic
 
 	// if there is existing candle for time of log entry, append to it
 	// TODO: dedupe same IPs in candle (by which rule?)
