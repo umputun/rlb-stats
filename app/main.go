@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/umputun/rlb-stats/app/store"
 )
@@ -14,12 +13,12 @@ const dbFilename = "/tmp/rlb-stats.bd"
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
-	// store := getEngine(dbFilename)
-	// regex := parse.InitRegex(defaultRegEx)
+	//store := getEngine(dbFilename)
+	// parser := parse.New(defaultRegEx)
 }
 
 func getEngine(boltFile string) store.Engine {
-	store, err := store.NewBolt(boltFile, time.Minute*5)
+	store, err := store.NewBolt(boltFile)
 	if err != nil {
 		log.Fatalf("[ERROR] can't open db, %v", err)
 	}
