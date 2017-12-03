@@ -29,20 +29,31 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	// save second log entry
 	secondLogEntry := parse.LogEntry{
 		SourceIP:        "127.0.0.2",
-		FileName:        "rtfiles/rt_podcast562.mp3",
+		FileName:        "rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n7.radio-t.com",
 		AnswerTime:      time.Second / 2,
 		Date:            time.Now().Round(0), // Round to drop monotonic clock, https://tip.golang.org/pkg/time/#hdr-Monotonic_Clocks
 	}
 	assert.Nil(t, s.Save(secondLogEntry), "saved second log entry")
+	thirdLogEntry := parse.LogEntry{
+		SourceIP:        "127.0.0.3",
+		FileName:        "rtfiles/rt_podcast563.mp3",
+		DestinationNode: "n6.radio-t.com",
+		AnswerTime:      time.Second / 4,
+		Date:            time.Now().Round(0), // Round to drop monotonic clock, https://tip.golang.org/pkg/time/#hdr-Monotonic_Clocks
+	}
+	assert.Nil(t, s.Save(thirdLogEntry), "saved third log entry")
 	// wait for aggregation to work
 	time.Sleep(time.Second * 5)
-	node := Info{
-		Volume:         1,
-		MinAnswerTime:  logEntry.AnswerTime,
-		MeanAnswerTime: logEntry.AnswerTime,
+	nodeFromTwoEntries := Info{
+		Volume:         2,
+		MinAnswerTime:  thirdLogEntry.AnswerTime,
+		MeanAnswerTime: (thirdLogEntry.AnswerTime + logEntry.AnswerTime) / 2,
 		MaxAnswerTime:  logEntry.AnswerTime,
-		Files:          map[string]int{logEntry.FileName: 1},
+		Files: map[string]int{
+			thirdLogEntry.FileName: 1,
+			logEntry.FileName:      1,
+		},
 	}
 	secondNode := Info{
 		Volume:         1,
@@ -52,19 +63,20 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 		Files:          map[string]int{secondLogEntry.FileName: 1},
 	}
 	sumNode := Info{
-		Volume:         2,
-		MinAnswerTime:  secondLogEntry.AnswerTime,
-		MeanAnswerTime: (secondLogEntry.AnswerTime + logEntry.AnswerTime) / 2,
+		Volume:         3,
+		MinAnswerTime:  thirdLogEntry.AnswerTime,
+		MeanAnswerTime: (thirdLogEntry.AnswerTime + secondLogEntry.AnswerTime + logEntry.AnswerTime) / 3,
 		MaxAnswerTime:  logEntry.AnswerTime,
 		Files: map[string]int{
-			logEntry.FileName:       1,
-			secondLogEntry.FileName: 1,
+			logEntry.FileName:      2,
+			thirdLogEntry.FileName: 1,
 		},
 	}
 	candle := []Candle{Candle{Nodes: map[string]Info{
 		"all":            sumNode,
-		"n6.radio-t.com": node,
-		"n7.radio-t.com": secondNode},
+		"n7.radio-t.com": secondNode,
+		"n6.radio-t.com": nodeFromTwoEntries,
+	},
 		StartMinute: time.Date(
 			logEntry.Date.Year(),
 			logEntry.Date.Month(),
