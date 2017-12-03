@@ -121,6 +121,19 @@ func (s *Bolt) saveCandles(entries map[time.Time]Candle) (err error) {
 	return err
 }
 
+func (s *Bolt) removeLogEntries(entries []parse.LogEntry) (err error) {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		for _, entry := range entries {
+			key := fmt.Sprintf("%d-%s", entry.Date.Unix(), entry.SourceIP)
+			err = tx.Bucket(bucketLogs).Delete([]byte(key))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // Load Candles by period
 func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err error) {
 	err = s.db.View(func(tx *bolt.Tx) error {
@@ -153,15 +166,17 @@ func (s *Bolt) activateCollector(every time.Duration) {
 	ticker := time.NewTicker(every)
 	go func() {
 		for range ticker.C {
-
+			// TODO run till the end of previous minute
+			// how to test in this case?
 			oldEntries, _ := s.loadLogEntry(
 				time.Date(2001, 11, 17, 0, 0, 0, 0, time.UTC),
-				time.Now().Add(-time.Minute))
+				time.Now())
 
 			if len(oldEntries) > 0 {
 				log.Printf("[INFO] old entries to aggregate: %d", len(oldEntries))
 				// TODO check for error
 				_ = s.saveCandles(entriesToCandles(oldEntries))
+				_ = s.removeLogEntries(oldEntries)
 			}
 
 		}

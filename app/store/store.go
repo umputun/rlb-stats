@@ -53,7 +53,7 @@ func (n Info) appendLog(l parse.LogEntry) Info {
 		n.MaxAnswerTime = l.AnswerTime
 	}
 	n.MeanAnswerTime = (n.MeanAnswerTime*time.Duration(n.Volume) + n.MeanAnswerTime) / time.Duration(n.Volume+1)
-	n.Volume++
+	n.Volume = n.Volume + 1
 	return n
 }
 
