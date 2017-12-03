@@ -79,7 +79,6 @@ func (s *Bolt) loadLogEntry(periodStart, periodEnd time.Time) (result []parse.Lo
 		max := []byte(fmt.Sprintf("%d-127.0.0.1", periodEnd.Unix()))
 
 		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
-			log.Printf("[DEBUG] found entry %s", string(k))
 			entry := parse.LogEntry{}
 			err = json.Unmarshal(v, &entry)
 			if err != nil {
@@ -144,7 +143,6 @@ func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err erro
 		max := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
 
 		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
-			log.Printf("[DEBUG] found candle %s", string(k))
 			entry := Candle{}
 			err = json.Unmarshal(v, &entry)
 			if err != nil {
