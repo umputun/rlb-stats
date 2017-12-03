@@ -39,7 +39,7 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 		SourceIP:        "127.0.0.3",
 		FileName:        "rtfiles/rt_podcast563.mp3",
 		DestinationNode: "n6.radio-t.com",
-		AnswerTime:      time.Second / 4,
+		AnswerTime:      time.Second * 4,
 		Date:            time.Now().Round(0), // Round to drop monotonic clock, https://tip.golang.org/pkg/time/#hdr-Monotonic_Clocks
 	}
 	assert.Nil(t, s.Save(thirdLogEntry), "saved third log entry")
@@ -47,9 +47,9 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	time.Sleep(time.Second * 5)
 	nodeFromTwoEntries := Info{
 		Volume:         2,
-		MinAnswerTime:  thirdLogEntry.AnswerTime,
+		MinAnswerTime:  logEntry.AnswerTime,
 		MeanAnswerTime: (thirdLogEntry.AnswerTime + logEntry.AnswerTime) / 2,
-		MaxAnswerTime:  logEntry.AnswerTime,
+		MaxAnswerTime:  thirdLogEntry.AnswerTime,
 		Files: map[string]int{
 			thirdLogEntry.FileName: 1,
 			logEntry.FileName:      1,
@@ -64,9 +64,9 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	}
 	sumNode := Info{
 		Volume:         3,
-		MinAnswerTime:  thirdLogEntry.AnswerTime,
+		MinAnswerTime:  secondLogEntry.AnswerTime,
 		MeanAnswerTime: (thirdLogEntry.AnswerTime + secondLogEntry.AnswerTime + logEntry.AnswerTime) / 3,
-		MaxAnswerTime:  logEntry.AnswerTime,
+		MaxAnswerTime:  thirdLogEntry.AnswerTime,
 		Files: map[string]int{
 			logEntry.FileName:      2,
 			thirdLogEntry.FileName: 1,
