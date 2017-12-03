@@ -8,7 +8,7 @@ import (
 	"github.com/umputun/rlb-stats/app/parse"
 )
 
-func TestNewAndUodateCandle(t *testing.T) {
+func TestNewAndUpdateCandle(t *testing.T) {
 
 	candle := NewCandle()
 	candle.update(parse.LogEntry{

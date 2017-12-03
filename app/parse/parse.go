@@ -6,7 +6,10 @@ import (
 	"time"
 )
 
-const testString = "2017/09/17 12:54:54.095329 - GET - /api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3"
+// Parser contain validated regular expression for parsing logs
+type Parser struct {
+	pattern *regexp.Regexp
+}
 
 // LogEntry contains meaningful data extracted from single log line
 type LogEntry struct {
@@ -17,17 +20,17 @@ type LogEntry struct {
 	Date            time.Time
 }
 
-// InitRegex checks if regular expression valid for parsing LogEntry
-func InitRegex(line string) (regex *regexp.Regexp) {
-	regex = regexp.MustCompile(line)
+// New checks if regular expression valid for parsing LogEntry
+func New(regEx string) (parser *Parser, err error) {
+	parser.pattern, err = regexp.Compile(regEx)
 	// TODO: validate regex to make sure it doesn't contain wrong fields and contain right fields
 	return
 }
 
-// Log parse log line into LogEntry
-func Log(line string, regEx *regexp.Regexp) (entry LogEntry, err error) {
-	result := regEx.FindStringSubmatch(line)
-	n := regEx.SubexpNames()
+// Do parse log line into LogEntry
+func (p *Parser) Do(line string) (entry LogEntry, err error) {
+	result := p.pattern.FindStringSubmatch(line)
+	n := p.pattern.SubexpNames()
 	for i, m := range result {
 		switch n[i] {
 		case "": // first result is full string, do nothing with it

@@ -43,6 +43,7 @@ func (n *Info) update(l parse.LogEntry) {
 	n.Volume++
 }
 
+// NewCandle create empty candle
 func NewCandle() (c Candle) {
 	c.Nodes = map[string]Info{}
 	c.StartMinute = time.Time{}

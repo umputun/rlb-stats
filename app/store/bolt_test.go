@@ -20,5 +20,5 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	assert.Nil(t, err, "key found")
 	assert.EqualValues(t, candle, savedCandle[0], "matches loaded msg")
 
-	os.Remove("/tmp/test.bd")
+	assert.Nil(t, os.Remove("/tmp/test.bd"), "removed fine")
 }
