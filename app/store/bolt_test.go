@@ -26,6 +26,7 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	savedCandle, err := s.Load(time.Time{}, time.Time{})
 	assert.Nil(t, err, "key found")
 	assert.EqualValues(t, candle, savedCandle[0], "matches loaded msg")
+	t.Logf("saved: %s\nloaded: %s", candle.StartMinute, savedCandle[0].StartMinute)
 
 	os.Remove("/tmp/test.bd")
 }
