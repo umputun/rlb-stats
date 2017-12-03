@@ -1,7 +1,7 @@
 # Build
 FROM golang:1.9-alpine as build
 
-RUN apk add --no-cache --update tzdata && cp /usr/share/zoneinfo/America/Chicago /etc/localtime 
+RUN apk add --no-cache --update tzdata git && cp /usr/share/zoneinfo/America/Chicago /etc/localtime 
 ADD . /go/src/github.com/umputun/rlb-stats
 WORKDIR /go/src/github.com/umputun/rlb-stats
 
