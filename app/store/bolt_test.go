@@ -19,11 +19,11 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 		FileName:        "/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n6.radio-t.com",
 		AnswerTime:      time.Second,
-		Date:            time.Time{},
+		Date:            time.Now().Round(0), // drop monotonic time by round
 	})
 
 	assert.Nil(t, s.Save(candle), "saved fine")
-	savedCandle, err := s.Load(time.Time{}, time.Time{})
+	savedCandle, err := s.Load(time.Now().Add(-time.Minute), time.Now())
 	assert.Nil(t, err, "key found")
 	assert.EqualValues(t, candle, savedCandle[0], "matches loaded msg")
 	t.Logf("saved: %s\nloaded: %s", candle.StartMinute, savedCandle[0].StartMinute)
