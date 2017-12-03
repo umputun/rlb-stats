@@ -29,7 +29,7 @@ type Engine interface {
 	Load(periodStart, periodEnd time.Time) (result []Candle, err error)
 }
 
-func infoFromLog(l parse.LogEntry) Info {
+func newInfo(l parse.LogEntry) Info {
 	return Info{
 		Volume:         1,
 		MinAnswerTime:  l.AnswerTime,
@@ -39,7 +39,7 @@ func infoFromLog(l parse.LogEntry) Info {
 	}
 }
 
-func (n Info) appendLog(l parse.LogEntry) Info {
+func (n *Info) update(l parse.LogEntry) {
 	// int is 0 if not defined, OK to use it
 	n.Files[l.FileName] += 1
 	if n.MinAnswerTime > l.AnswerTime {
@@ -50,11 +50,10 @@ func (n Info) appendLog(l parse.LogEntry) Info {
 	}
 	n.MeanAnswerTime = (n.MeanAnswerTime*time.Duration(n.Volume) + l.AnswerTime) / time.Duration(n.Volume+1)
 	n.Volume += 1
-	return n
 }
 
-func createCandle(l parse.LogEntry) (c Candle) {
-	node := infoFromLog(l)
+func newCandle(l parse.LogEntry) (c Candle) {
+	node := newInfo(l)
 	c.Nodes = map[string]Info{
 		l.DestinationNode: node,
 		"all":             node,
@@ -63,16 +62,17 @@ func createCandle(l parse.LogEntry) (c Candle) {
 	return
 }
 
-func appendToCandle(c Candle, l parse.LogEntry) Candle {
+func (c *Candle) update(l parse.LogEntry) {
 	node, nodeInCandle := c.Nodes[l.DestinationNode]
 	if nodeInCandle {
-		node = node.appendLog(l)
+		node.update(l)
 	} else {
-		node = infoFromLog(l)
+		node = newInfo(l)
 	}
 	c.Nodes[l.DestinationNode] = node
-	c.Nodes["all"] = c.Nodes["all"].appendLog(l)
-	return c
+	nodeAll := c.Nodes["all"]
+	nodeAll.update(l)
+	c.Nodes["all"] = nodeAll
 }
 
 // entriesToCandles convert LogEntries to candles,
@@ -95,9 +95,10 @@ func entriesToCandles(entries []parse.LogEntry) map[time.Time]Candle {
 		if !duplicate {
 			candle, exists := c[entry.Date]
 			if exists {
-				c[entry.Date] = appendToCandle(candle, entry)
+				candle.update(entry)
+				c[entry.Date] = candle
 			} else {
-				c[entry.Date] = createCandle(entry)
+				c[entry.Date] = newCandle(entry)
 			}
 			deduplicate[fmt.Sprintf("%d-%s-%s", entry.Date.Unix(), entry.FileName, entry.SourceIP)] = true
 		}
