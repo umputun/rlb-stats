@@ -3,6 +3,8 @@ package store
 import (
 	"time"
 
+	"fmt"
+
 	"github.com/umputun/rlb-stats/app/parse"
 )
 
@@ -21,7 +23,7 @@ type Info struct {
 	Files          map[string]int
 }
 
-// Engine defines interface to save log entries and load candels
+// Engine defines interface to save log entries and load candles
 type Engine interface {
 	Save(msg parse.LogEntry) (err error)
 	Load(periodStart, periodEnd time.Time) (result []Candle, err error)
@@ -50,8 +52,7 @@ func (n Info) appendLog(l parse.LogEntry) Info {
 	if n.MaxAnswerTime < l.AnswerTime {
 		n.MaxAnswerTime = l.AnswerTime
 	}
-	// TODO get average of durations
-	//n.MeanAnswerTime = (n.MeanAnswerTime * n.Volume) + n.MeanAnswerTime) / (n.Volume + 1)
+	n.MeanAnswerTime = (n.MeanAnswerTime*time.Duration(n.Volume) + n.MeanAnswerTime) / time.Duration(n.Volume+1)
 	n.Volume++
 	return n
 }
@@ -62,6 +63,7 @@ func createCandle(l parse.LogEntry) (c Candle) {
 		l.DestinationNode: node,
 		"all":             node,
 	}
+	c.StartMinute = l.Date
 	return
 }
 
@@ -74,5 +76,36 @@ func appendToCandle(c Candle, l parse.LogEntry) Candle {
 	}
 	c.Nodes[l.DestinationNode] = node
 	c.Nodes["all"] = c.Nodes["all"].appendLog(l)
+	c.StartMinute = l.Date
+	return c
+}
+
+// entriesToCandles convert LogEntries to candles,
+// dropping duplicate IP-filename pairs each minute
+func entriesToCandles(entries []parse.LogEntry) map[time.Time]Candle {
+	c := make(map[time.Time]Candle)
+	deduplicate := make(map[string]bool)
+	for _, entry := range entries {
+		// drop seconds and nanoseconds from log date
+		entry.Date = time.Date(
+			entry.Date.Year(),
+			entry.Date.Month(),
+			entry.Date.Day(),
+			entry.Date.Hour(),
+			entry.Date.Minute(),
+			0,
+			0,
+			entry.Date.Location())
+		_, duplicate := deduplicate[fmt.Sprintf("%d-%s-%s", entry.Date.Unix(), entry.FileName, entry.SourceIP)]
+		if !duplicate {
+			candle, exists := c[entry.Date]
+			if exists {
+				c[entry.Date] = appendToCandle(candle, entry)
+			} else {
+				c[entry.Date] = createCandle(entry)
+			}
+			deduplicate[fmt.Sprintf("%d-%s-%s", entry.Date.Unix(), entry.FileName, entry.SourceIP)] = true
+		}
+	}
 	return c
 }

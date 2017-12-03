@@ -25,15 +25,23 @@ func NewBolt(dbFile string, collectDuration time.Duration) (*Bolt, error) {
 	log.Printf("[INFO] bolt (persitent) store, %s", dbFile)
 	result := Bolt{}
 	db, err := bolt.Open(dbFile, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	// TODO add error handling
-	db.Update(func(tx *bolt.Tx) error {
+	if err != nil {
+		return &result, err
+	}
+	err = db.Update(func(tx *bolt.Tx) error {
 		_, e := tx.CreateBucketIfNotExists(bucketCandles)
 		return e
 	})
-	db.Update(func(tx *bolt.Tx) error {
+	if err != nil {
+		return &result, err
+	}
+	err = db.Update(func(tx *bolt.Tx) error {
 		_, e := tx.CreateBucketIfNotExists(bucketLogs)
 		return e
 	})
+	if err != nil {
+		return &result, err
+	}
 	result.db = db
 	result.activateCollector(collectDuration)
 	return &result, err
@@ -47,9 +55,8 @@ func (s *Bolt) Save(entry parse.LogEntry) (err error) {
 		b := tx.Bucket(bucketLogs)
 		total = b.Stats().KeyN
 		jdata, jerr := json.Marshal(entry)
-		// TODO why the hell we check jerr and return err?
 		if jerr != nil {
-			return err
+			return jerr
 		}
 		return b.Put([]byte(key), jdata)
 	})
@@ -57,14 +64,13 @@ func (s *Bolt) Save(entry parse.LogEntry) (err error) {
 	if err == nil {
 		log.Printf("[DEBUG] saved, time=%v, total=%d", entry.Date.Unix(), total+1)
 	}
-
 	return err
 }
 
 // Load LogEntries by period
 func (s *Bolt) loadLogEntry(periodStart, periodEnd time.Time) (result []parse.LogEntry, err error) {
 
-	s.db.View(func(tx *bolt.Tx) error {
+	err = s.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketLogs)
 		c := b.Cursor()
 
@@ -75,12 +81,18 @@ func (s *Bolt) loadLogEntry(periodStart, periodEnd time.Time) (result []parse.Lo
 		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
 			log.Printf("[DEBUG] found entry %s", string(k))
 			entry := parse.LogEntry{}
-			json.Unmarshal(v, &entry)
+			err = json.Unmarshal(v, &entry)
+			if err != nil {
+				return err
+			}
+			// we save in local time and load in local time, which is fair, however it's better to
+			// FIXME save in time.RFC3339 so location information is preserved
+			// solutions are ugly as hell, I'll better leave this hack in place for now
+			// https://stackoverflow.com/questions/23695479/format-timestamp-in-outgoing-json-in-golang
 			entry.Date = entry.Date.In(time.Local)
 			result = append(result, entry)
 			_ = v
 		}
-
 		return nil
 	})
 
@@ -88,28 +100,30 @@ func (s *Bolt) loadLogEntry(periodStart, periodEnd time.Time) (result []parse.Lo
 }
 
 // Save Candle with starting minute time.Unix() as a key for bolt range query
-func (s *Bolt) saveCandle(entry Candle) (err error) {
-	key := fmt.Sprintf("%d", entry.MinuteStart.Unix())
-	total := 0
-	err = s.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketCandles)
-		total = b.Stats().KeyN
-		// TODO why the hell we check jerr and return err?
-		jdata, jerr := json.Marshal(entry)
-		if jerr != nil {
+func (s *Bolt) saveCandles(entries map[time.Time]Candle) (err error) {
+	for _, entry := range entries {
+		key := fmt.Sprintf("%d", entry.StartMinute.Unix())
+		total := 0
+		err = s.db.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket(bucketCandles)
+			total = b.Stats().KeyN
+			jdata, jerr := json.Marshal(entry)
+			if jerr != nil {
+				return jerr
+			}
+			return b.Put([]byte(key), jdata)
+		})
+		if err != nil {
 			return err
 		}
-		return b.Put([]byte(key), jdata)
-	})
-	if err == nil {
-		log.Printf("[DEBUG] saved candle, MinuteStart=%v, total=%d", entry.MinuteStart.Unix(), total+1)
+		log.Printf("[DEBUG] saved candle, StartMinute=%v, total=%d", entry.StartMinute.Unix(), total+1)
 	}
 	return err
 }
 
 // Load Candles by period
 func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err error) {
-	s.db.View(func(tx *bolt.Tx) error {
+	err = s.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketCandles)
 		c := b.Cursor()
 
@@ -119,39 +133,16 @@ func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err erro
 		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
 			log.Printf("[DEBUG] found candle %s", string(k))
 			entry := Candle{}
-			json.Unmarshal(v, &entry)
+			err = json.Unmarshal(v, &entry)
+			if err != nil {
+				return err
+			}
 			result = append(result, entry)
 			_ = v
 		}
-
 		return nil
 	})
-
 	return
-}
-
-// entriesToCandles gathers existing Candles (if there are any),
-// and add LogEntries to them, dropping duplicate IPs when possible
-func (s *Bolt) entriesToCandles(entries []parse.LogEntry) {
-	startTime := time.Now()
-	endTime := time.Now().Add(-time.Minute)
-
-	for _, entry := range entries {
-		if entry.Date.Before(startTime) {
-			startTime = entry.Date
-		}
-		if entry.Date.After(endTime) {
-			endTime = entry.Date
-		}
-	}
-
-	//existingCandles, _ := s.Load(startTime, endTime)
-	//newCandles := []Candle
-	// TODO write actual entries to candles logic
-
-	// if there is existing candle for time of log entry, append to it
-	// TODO: dedupe same IPs in candle (by which rule?)
-
 }
 
 // activateCollector runs periodic cleanups to aggregate data into candles
@@ -169,7 +160,8 @@ func (s *Bolt) activateCollector(every time.Duration) {
 
 			if len(oldEntries) > 0 {
 				log.Printf("[INFO] old entries to aggregate: %d", len(oldEntries))
-				s.entriesToCandles(oldEntries)
+				// TODO check for error
+				_ = s.saveCandles(entriesToCandles(oldEntries))
 			}
 
 		}
