@@ -72,6 +72,8 @@ func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err erro
 			if err != nil {
 				return err
 			}
+			// FIXME save in time.RFC3339 so location information is preserved
+			entry.StartMinute = entry.StartMinute.In(time.Local)
 			result = append(result, entry)
 			_ = v
 		}
