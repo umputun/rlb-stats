@@ -3,8 +3,6 @@ package store
 import (
 	"time"
 
-	"fmt"
-
 	"github.com/umputun/rlb-stats/app/parse"
 )
 
@@ -25,17 +23,17 @@ type Info struct {
 
 // Engine defines interface to save log entries and load candles
 type Engine interface {
-	Save(msg parse.LogEntry) (err error)
+	Save(entries map[time.Time]Candle) (err error)
 	Load(periodStart, periodEnd time.Time) (result []Candle, err error)
 }
 
-func newInfo(l parse.LogEntry) Info {
+func newInfo() Info {
 	return Info{
-		Volume:         1,
-		MinAnswerTime:  l.AnswerTime,
-		MeanAnswerTime: l.AnswerTime,
-		MaxAnswerTime:  l.AnswerTime,
-		Files:          map[string]int{l.FileName: 1},
+		Volume:         0,
+		MinAnswerTime:  time.Hour,
+		MeanAnswerTime: time.Duration(0),
+		MaxAnswerTime:  time.Duration(0),
+		Files:          map[string]int{},
 	}
 }
 
@@ -52,56 +50,20 @@ func (n *Info) update(l parse.LogEntry) {
 	n.Volume += 1
 }
 
-func newCandle(l parse.LogEntry) (c Candle) {
-	node := newInfo(l)
-	c.Nodes = map[string]Info{
-		l.DestinationNode: node,
-		"all":             node,
-	}
-	c.StartMinute = l.Date
+func newCandle(StartMinute time.Time) (c Candle) {
+	c.Nodes = map[string]Info{}
+	c.StartMinute = StartMinute
 	return
 }
 
 func (c *Candle) update(l parse.LogEntry) {
-	node, nodeInCandle := c.Nodes[l.DestinationNode]
-	if nodeInCandle {
-		node.update(l)
-	} else {
-		node = newInfo(l)
+	node, ok := c.Nodes[l.DestinationNode]
+	if !ok {
+		node = newInfo()
 	}
+	node.update(l)
 	c.Nodes[l.DestinationNode] = node
 	nodeAll := c.Nodes["all"]
 	nodeAll.update(l)
 	c.Nodes["all"] = nodeAll
-}
-
-// entriesToCandles convert LogEntries to candles,
-// dropping duplicate IP-filename pairs each minute
-func entriesToCandles(entries []parse.LogEntry) map[time.Time]Candle {
-	c := make(map[time.Time]Candle)
-	deduplicate := make(map[string]bool)
-	for _, entry := range entries {
-		// drop seconds and nanoseconds from log date
-		entry.Date = time.Date(
-			entry.Date.Year(),
-			entry.Date.Month(),
-			entry.Date.Day(),
-			entry.Date.Hour(),
-			entry.Date.Minute(),
-			0,
-			0,
-			entry.Date.Location())
-		_, duplicate := deduplicate[fmt.Sprintf("%d-%s-%s", entry.Date.Unix(), entry.FileName, entry.SourceIP)]
-		if !duplicate {
-			candle, exists := c[entry.Date]
-			if exists {
-				candle.update(entry)
-				c[entry.Date] = candle
-			} else {
-				c[entry.Date] = newCandle(entry)
-			}
-			deduplicate[fmt.Sprintf("%d-%s-%s", entry.Date.Unix(), entry.FileName, entry.SourceIP)] = true
-		}
-	}
-	return c
 }

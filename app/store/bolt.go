@@ -9,11 +9,9 @@ import (
 	"bytes"
 
 	"github.com/boltdb/bolt"
-	"github.com/umputun/rlb-stats/app/parse"
 )
 
-var bucketCandles = []byte("stats")
-var bucketLogs = []byte("raw_logs")
+var bucket = []byte("stats")
 
 // Bolt implements store.Engine with boltdb
 type Bolt struct {
@@ -21,7 +19,7 @@ type Bolt struct {
 }
 
 // NewBolt makes persistent boltdb based store
-func NewBolt(dbFile string, collectDuration time.Duration) (*Bolt, error) {
+func NewBolt(dbFile string) (*Bolt, error) {
 	log.Printf("[INFO] bolt (persitent) store, %s", dbFile)
 	result := Bolt{}
 	db, err := bolt.Open(dbFile, 0600, &bolt.Options{Timeout: 1 * time.Second})
@@ -29,82 +27,23 @@ func NewBolt(dbFile string, collectDuration time.Duration) (*Bolt, error) {
 		return &result, err
 	}
 	err = db.Update(func(tx *bolt.Tx) error {
-		_, e := tx.CreateBucketIfNotExists(bucketCandles)
-		return e
-	})
-	if err != nil {
-		return &result, err
-	}
-	err = db.Update(func(tx *bolt.Tx) error {
-		_, e := tx.CreateBucketIfNotExists(bucketLogs)
+		_, e := tx.CreateBucketIfNotExists(bucket)
 		return e
 	})
 	if err != nil {
 		return &result, err
 	}
 	result.db = db
-	result.activateCollector(collectDuration)
 	return &result, err
 }
 
-// Save LogEntry with ts-ip as a key. ts prefix for bolt range query
-func (s *Bolt) Save(entry parse.LogEntry) (err error) {
-	key := fmt.Sprintf("%d-%s", entry.Date.Unix(), entry.SourceIP)
-	total := 0
-	err = s.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketLogs)
-		total = b.Stats().KeyN
-		jdata, jerr := json.Marshal(entry)
-		if jerr != nil {
-			return jerr
-		}
-		return b.Put([]byte(key), jdata)
-	})
-
-	if err == nil {
-		log.Printf("[DEBUG] saved, time=%v, total=%d", entry.Date.Unix(), total+1)
-	}
-	return err
-}
-
-// Load LogEntries by period
-func (s *Bolt) loadLogEntry(periodStart, periodEnd time.Time) (result []parse.LogEntry, err error) {
-
-	err = s.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketLogs)
-		c := b.Cursor()
-
-		// ip just a place holder to make keys sorted properly by ts prefix
-		min := []byte(fmt.Sprintf("%d-127.0.0.1", periodStart.Unix()))
-		max := []byte(fmt.Sprintf("%d-127.0.0.1", periodEnd.Unix()))
-
-		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
-			entry := parse.LogEntry{}
-			err = json.Unmarshal(v, &entry)
-			if err != nil {
-				return err
-			}
-			// we save in local time and load in local time, which is fair, however it's better to
-			// FIXME save in time.RFC3339 so location information is preserved
-			// solutions are ugly as hell, I'll better leave this hack in place for now
-			// https://stackoverflow.com/questions/23695479/format-timestamp-in-outgoing-json-in-golang
-			entry.Date = entry.Date.In(time.Local)
-			result = append(result, entry)
-			_ = v
-		}
-		return nil
-	})
-
-	return
-}
-
-// Save Candle with starting minute time.Unix() as a key for bolt range query
-func (s *Bolt) saveCandles(entries map[time.Time]Candle) (err error) {
+// Save Candles with starting minute time.Unix() as a key for bolt range query
+func (s *Bolt) Save(entries map[time.Time]Candle) (err error) {
 	for _, entry := range entries {
 		key := fmt.Sprintf("%d", entry.StartMinute.Unix())
 		total := 0
 		err = s.db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket(bucketCandles)
+			b := tx.Bucket(bucket)
 			total = b.Stats().KeyN
 			jdata, jerr := json.Marshal(entry)
 			if jerr != nil {
@@ -120,23 +59,10 @@ func (s *Bolt) saveCandles(entries map[time.Time]Candle) (err error) {
 	return err
 }
 
-func (s *Bolt) removeLogEntries(entries []parse.LogEntry) (err error) {
-	return s.db.Update(func(tx *bolt.Tx) error {
-		for _, entry := range entries {
-			key := fmt.Sprintf("%d-%s", entry.Date.Unix(), entry.SourceIP)
-			err = tx.Bucket(bucketLogs).Delete([]byte(key))
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
 // Load Candles by period
 func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err error) {
 	err = s.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketCandles)
+		b := tx.Bucket(bucket)
 		c := b.Cursor()
 
 		min := []byte(fmt.Sprintf("%d", periodStart.Unix()))
@@ -154,29 +80,4 @@ func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err erro
 		return nil
 	})
 	return
-}
-
-// activateCollector runs periodic cleanups to aggregate data into candles
-// detection based on ts (unix time) prefix of the key.
-func (s *Bolt) activateCollector(every time.Duration) {
-	log.Printf("[INFO] collecter activated, every %v", every)
-
-	ticker := time.NewTicker(every)
-	go func() {
-		for range ticker.C {
-			// TODO run till the end of previous minute
-			// how to test in this case?
-			oldEntries, _ := s.loadLogEntry(
-				time.Date(2001, 11, 17, 0, 0, 0, 0, time.UTC),
-				time.Now())
-
-			if len(oldEntries) > 0 {
-				log.Printf("[INFO] old entries to aggregate: %d", len(oldEntries))
-				// TODO check for error
-				_ = s.saveCandles(entriesToCandles(oldEntries))
-				_ = s.removeLogEntries(oldEntries)
-			}
-
-		}
-	}()
 }
