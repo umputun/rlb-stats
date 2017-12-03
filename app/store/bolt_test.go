@@ -10,7 +10,6 @@ import (
 )
 
 func TestSaveAndLoadLogEntryBolt(t *testing.T) {
-	// create DB
 	s, err := NewBolt("/tmp/test.bd")
 	assert.Nil(t, err, "engine created")
 
@@ -20,11 +19,11 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 		FileName:        "/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n6.radio-t.com",
 		AnswerTime:      time.Second,
-		Date:            time.Now().Round(0),
+		Date:            time.Time{},
 	})
 
 	assert.Nil(t, s.Save(candle), "saved fine")
-	savedCandle, err := s.Load(time.Now().Add(-time.Minute), time.Now().Add(time.Minute))
+	savedCandle, err := s.Load(time.Time{}, time.Time{})
 	assert.Nil(t, err, "key found")
 	assert.EqualValues(t, candle, savedCandle[0], "matches loaded msg")
 

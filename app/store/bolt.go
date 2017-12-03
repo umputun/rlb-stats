@@ -67,14 +67,12 @@ func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err erro
 		max := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
 
 		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
-			entry := Candle{}
-			err = json.Unmarshal(v, &entry)
+			candle := Candle{}
+			err = json.Unmarshal(v, &candle)
 			if err != nil {
 				return err
 			}
-			// FIXME save in time.RFC3339 so location information is preserved
-			entry.StartMinute = entry.StartMinute.In(time.Local)
-			result = append(result, entry)
+			result = append(result, candle)
 			_ = v
 		}
 		return nil
