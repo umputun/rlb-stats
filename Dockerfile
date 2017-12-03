@@ -4,8 +4,8 @@ FROM umputun/baseimage:buildgo-latest as build
 ADD . /go/src/github.com/umputun/rlb-stats
 WORKDIR /go/src/github.com/umputun/rlb-stats
 
-RUN /script/checkvendor.sh ./app/... && \
-    /script/coverage.sh ./app/... && \
+RUN /script/checkvendor.sh ./app/ && \
+    /script/coverage.sh ./app/ && \
     CGO_ENABLED=0 GOOS=linux go build -o rlb-stats -ldflags "-X main.revision=$(git rev-parse --abbrev-ref HEAD)-$(git describe --abbrev=7 --always --tags)-$(date +%Y%m%d-%H:%M:%S)" ./app
 
 # Run
