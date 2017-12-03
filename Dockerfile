@@ -1,11 +1,17 @@
 # Build
 FROM golang:1.9-alpine as build
 
-RUN apk add --no-cache --update tzdata git && cp /usr/share/zoneinfo/America/Chicago /etc/localtime 
+ARG TZ=America/Chicago
+
+RUN apk add --no-cache --update tzdata git \
+ && go get -u github.com/alecthomas/gometalinter \
+ && gometalinter --install \
+ && cp /usr/share/zoneinfo/$TZ /etc/localtime \
+ && echo $TZ > /etc/timezone
 ADD . /go/src/github.com/umputun/rlb-stats
 WORKDIR /go/src/github.com/umputun/rlb-stats
 
-RUN go test ./app/... && \
+RUN gometalinter ./app/... && \
     CGO_ENABLED=0 GOOS=linux go build -o rlb-stats -ldflags "-X main.revision=$(git rev-parse --abbrev-ref HEAD)-$(git describe --abbrev=7 --always --tags)-$(date +%Y%m%d-%H:%M:%S)" ./app
 
 # Run
