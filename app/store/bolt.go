@@ -54,6 +54,7 @@ func (s *Bolt) Save(candle Candle) (err error) {
 		return err
 	}
 	log.Printf("[DEBUG] saved candle, StartMinute=%v, total=%d", candle.StartMinute.Unix(), total+1)
+	return nil
 }
 
 // Load Candles by period

@@ -45,13 +45,13 @@ func (n *Info) update(l parse.LogEntry) {
 	if n.MaxAnswerTime < l.AnswerTime {
 		n.MaxAnswerTime = l.AnswerTime
 	}
-	n.Files[l.FileName] += 1
-	n.Volume += 1
+	n.Files[l.FileName]++
+	n.Volume++
 }
 
-func newCandle(StartMinute time.Time) (c Candle) {
+func newCandle() (c Candle) {
 	c.Nodes = map[string]Info{}
-	c.StartMinute = StartMinute
+	c.StartMinute = time.Time{}
 	return
 }
 
@@ -64,8 +64,9 @@ func (c *Candle) update(l parse.LogEntry) {
 	c.Nodes[l.DestinationNode] = node
 	nodeAll, allOk := c.Nodes["all"]
 	if !allOk {
-		node = newInfo()
+		nodeAll = newInfo()
 	}
 	nodeAll.update(l)
 	c.Nodes["all"] = nodeAll
+	c.StartMinute = l.Date
 }
