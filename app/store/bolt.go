@@ -38,25 +38,22 @@ func NewBolt(dbFile string) (*Bolt, error) {
 }
 
 // Save Candles with starting minute time.Unix() as a key for bolt range query
-func (s *Bolt) Save(entries map[time.Time]Candle) (err error) {
-	for _, entry := range entries {
-		key := fmt.Sprintf("%d", entry.StartMinute.Unix())
-		total := 0
-		err = s.db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket(bucket)
-			total = b.Stats().KeyN
-			jdata, jerr := json.Marshal(entry)
-			if jerr != nil {
-				return jerr
-			}
-			return b.Put([]byte(key), jdata)
-		})
-		if err != nil {
-			return err
+func (s *Bolt) Save(candle Candle) (err error) {
+	key := fmt.Sprintf("%d", candle.StartMinute.Unix())
+	total := 0
+	err = s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucket)
+		total = b.Stats().KeyN
+		jdata, jerr := json.Marshal(candle)
+		if jerr != nil {
+			return jerr
 		}
-		log.Printf("[DEBUG] saved candle, StartMinute=%v, total=%d", entry.StartMinute.Unix(), total+1)
+		return b.Put([]byte(key), jdata)
+	})
+	if err != nil {
+		return err
 	}
-	return err
+	log.Printf("[DEBUG] saved candle, StartMinute=%v, total=%d", candle.StartMinute.Unix(), total+1)
 }
 
 // Load Candles by period

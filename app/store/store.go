@@ -23,7 +23,7 @@ type Info struct {
 
 // Engine defines interface to save log entries and load candles
 type Engine interface {
-	Save(entries map[time.Time]Candle) (err error)
+	Save(candle Candle) (err error)
 	Load(periodStart, periodEnd time.Time) (result []Candle, err error)
 }
 
@@ -38,15 +38,14 @@ func newInfo() Info {
 }
 
 func (n *Info) update(l parse.LogEntry) {
-	// int is 0 if not defined, OK to use it
-	n.Files[l.FileName] += 1
 	if n.MinAnswerTime > l.AnswerTime {
 		n.MinAnswerTime = l.AnswerTime
 	}
+	n.MeanAnswerTime = (n.MeanAnswerTime*time.Duration(n.Volume) + l.AnswerTime) / time.Duration(n.Volume+1)
 	if n.MaxAnswerTime < l.AnswerTime {
 		n.MaxAnswerTime = l.AnswerTime
 	}
-	n.MeanAnswerTime = (n.MeanAnswerTime*time.Duration(n.Volume) + l.AnswerTime) / time.Duration(n.Volume+1)
+	n.Files[l.FileName] += 1
 	n.Volume += 1
 }
 
@@ -63,7 +62,10 @@ func (c *Candle) update(l parse.LogEntry) {
 	}
 	node.update(l)
 	c.Nodes[l.DestinationNode] = node
-	nodeAll := c.Nodes["all"]
+	nodeAll, allOk := c.Nodes["all"]
+	if !allOk {
+		node = newInfo()
+	}
 	nodeAll.update(l)
 	c.Nodes["all"] = nodeAll
 }
