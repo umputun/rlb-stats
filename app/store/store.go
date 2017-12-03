@@ -40,20 +40,16 @@ func infoFromLog(l parse.LogEntry) Info {
 }
 
 func (n Info) appendLog(l parse.LogEntry) Info {
-	count, fileInNode := n.Files[l.FileName]
-	if fileInNode {
-		n.Files[l.FileName] = count + 1
-	} else {
-		n.Files[l.FileName] = 1
-	}
+	// int is 0 if not defined, OK to use it
+	n.Files[l.FileName] += 1
 	if n.MinAnswerTime > l.AnswerTime {
 		n.MinAnswerTime = l.AnswerTime
 	}
 	if n.MaxAnswerTime < l.AnswerTime {
 		n.MaxAnswerTime = l.AnswerTime
 	}
-	n.MeanAnswerTime = (n.MeanAnswerTime*time.Duration(n.Volume) + n.MeanAnswerTime) / time.Duration(n.Volume+1)
-	n.Volume = n.Volume + 1
+	n.MeanAnswerTime = (n.MeanAnswerTime*time.Duration(n.Volume) + l.AnswerTime) / time.Duration(n.Volume+1)
+	n.Volume += 1
 	return n
 }
 
@@ -76,7 +72,6 @@ func appendToCandle(c Candle, l parse.LogEntry) Candle {
 	}
 	c.Nodes[l.DestinationNode] = node
 	c.Nodes["all"] = c.Nodes["all"].appendLog(l)
-	c.StartMinute = l.Date
 	return c
 }
 
