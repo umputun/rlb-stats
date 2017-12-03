@@ -1,17 +1,11 @@
 # Build
-FROM golang:1.9-alpine as build
+FROM umputun/baseimage:buildgo-latest as build
 
-ARG TZ=America/Chicago
-
-RUN apk add --no-cache --update tzdata git \
- && go get -u github.com/alecthomas/gometalinter \
- && gometalinter --install \
- && cp /usr/share/zoneinfo/$TZ /etc/localtime \
- && echo $TZ > /etc/timezone
 ADD . /go/src/github.com/umputun/rlb-stats
 WORKDIR /go/src/github.com/umputun/rlb-stats
 
-RUN gometalinter --disable-all --vendor --deadline=300s --enable=vet --enable=vetshadow --enable=golint  --enable=staticcheck --enable=ineffassign --enable=goconst --enable=errcheck --enable=unconvert --enable=deadcode  --enable=gosimple --enable=gas -tests ./app/... && \
+RUN /script/checkvendor.sh ./app/... && \
+    /script/coverage.sh ./app/... && \
     CGO_ENABLED=0 GOOS=linux go build -o rlb-stats -ldflags "-X main.revision=$(git rev-parse --abbrev-ref HEAD)-$(git describe --abbrev=7 --always --tags)-$(date +%Y%m%d-%H:%M:%S)" ./app
 
 # Run
