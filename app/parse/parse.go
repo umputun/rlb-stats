@@ -42,11 +42,14 @@ func (p *Parser) Do(line string) (entry LogEntry, err error) {
 		case "DestinationNode":
 			entry.DestinationNode = m
 		case "AnswerTime":
-			entry.AnswerTime, _ = time.ParseDuration(m)
+			entry.AnswerTime, err = time.ParseDuration(m)
 		case "Date":
-			entry.Date, _ = time.Parse("2006/01/02 15:04:05", m)
+			entry.Date, err = time.Parse("2006/01/02 15:04:05", m)
 		default:
 			log.Fatalf("[ERROR] unknown field '%s'", n[i])
+		}
+		if err != nil {
+			return entry, err
 		}
 	}
 	return entry, err

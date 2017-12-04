@@ -68,12 +68,12 @@ func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []candle.Candle, e
 		max := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
 
 		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
-			candle := candle.Candle{}
-			err = json.Unmarshal(v, &candle)
+			newCandle := candle.Candle{}
+			err = json.Unmarshal(v, &newCandle)
 			if err != nil {
 				return err
 			}
-			result = append(result, candle)
+			result = append(result, newCandle)
 			_ = v
 		}
 		return nil
