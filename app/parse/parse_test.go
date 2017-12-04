@@ -17,7 +17,7 @@ func Test(t *testing.T) {
 	entry, err := parser.Do(testString)
 	assert.Nil(t, err, "string parsed")
 
-	entry_parsed := LogEntry{
+	entryParsed := LogEntry{
 		SourceIP:        "213.87.120.120",
 		FileName:        "/api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n6.radio-t.com",
@@ -25,5 +25,5 @@ func Test(t *testing.T) {
 		Date:            time.Date(2017, 9, 17, 12, 54, 54, 95329000, time.Time{}.Location()),
 	}
 
-	assert.EqualValues(t, entry_parsed, entry, "matches loaded msg")
+	assert.EqualValues(t, entryParsed, entry, "matches loaded msg")
 }
