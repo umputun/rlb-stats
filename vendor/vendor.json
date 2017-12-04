@@ -3,10 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "Ac0sHflTyYX4PmgBEJ+POSTyd5o=",
+			"checksumSHA1": "lbE4q2dpUgue10EEx8eutP36vzo=",
 			"path": "github.com/boltdb/bolt",
-			"revision": "fa5367d20c994db73282594be0146ab221657943",
-			"revisionTime": "2017-09-07T20:20:52Z"
+			"revision": "9da31745363232bc1e27dbab3569e77383a51585",
+			"revisionTime": "2017-11-20T01:03:07Z"
 		},
 		{
 			"checksumSHA1": "OFu4xJEIjiI8Suu+j/gabfp+y6Q=",
@@ -27,7 +27,13 @@
 			"path": "github.com/stretchr/testify/assert",
 			"revision": "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f",
 			"revisionTime": "2017-08-14T20:04:35Z"
+		},
+		{
+			"checksumSHA1": "GvrtqfUw0+pPZ1ODQB+X1DqCQmM=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "8b4580aae2a0dd0c231a45d3ccb8434ff533b840",
+			"revisionTime": "2017-11-30T16:26:51Z"
 		}
 	],
-	"rootPath": "github.com/umputun/rlb-stats/app"
+	"rootPath": "github.com/umputun/rlb-stats"
 }
