@@ -22,6 +22,7 @@ type LogEntry struct {
 
 // New checks if regular expression valid for parsing LogEntry
 func New(regEx string) (parser *Parser, err error) {
+	parser = &Parser{}
 	parser.pattern, err = regexp.Compile(regEx)
 	// TODO: validate regex to make sure it doesn't contain wrong fields and contain right fields
 	return
