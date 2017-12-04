@@ -25,7 +25,7 @@ func New(regEx string) (parser *Parser, err error) {
 	parser = &Parser{}
 	parser.pattern, err = regexp.Compile(regEx)
 	// TODO: validate regex to make sure it doesn't contain wrong fields and contain right fields
-	return
+	return parser, err
 }
 
 // Do parse log line into LogEntry
@@ -49,5 +49,5 @@ func (p *Parser) Do(line string) (entry LogEntry, err error) {
 			log.Fatalf("[ERROR] unknown field '%s'", n[i])
 		}
 	}
-	return
+	return entry, err
 }

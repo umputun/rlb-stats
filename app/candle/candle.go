@@ -47,7 +47,7 @@ func (n *Info) update(l parse.LogEntry) {
 func NewCandle() (c Candle) {
 	c.Nodes = map[string]Info{}
 	c.StartMinute = time.Time{}
-	return
+	return c
 }
 
 func (c *Candle) update(l parse.LogEntry) {

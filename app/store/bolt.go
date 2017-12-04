@@ -78,5 +78,5 @@ func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []candle.Candle, e
 		}
 		return nil
 	})
-	return
+	return result, err
 }
