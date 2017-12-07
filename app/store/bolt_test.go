@@ -10,15 +10,20 @@ import (
 )
 
 func TestSaveAndLoadLogEntryBolt(t *testing.T) {
+	// normal flow
 	s, err := NewBolt("/tmp/test.bd")
 	assert.Nil(t, err, "engine created")
 
-	candle := candle.NewCandle()
+	testCandle := candle.NewCandle()
 
-	assert.Nil(t, s.Save(candle), "saved fine")
+	assert.Nil(t, s.Save(testCandle), "saved fine")
 	savedCandle, err := s.Load(time.Time{}, time.Time{})
 	assert.Nil(t, err, "key found")
-	assert.EqualValues(t, candle, savedCandle[0], "matches loaded msg")
+	assert.EqualValues(t, testCandle, savedCandle[0], "matches loaded msg")
 
 	assert.Nil(t, os.Remove("/tmp/test.bd"), "removed fine")
+
+	// broken DB file
+	s, err = NewBolt("/dev/null")
+	assert.NotNil(t, err, "engine not created")
 }
