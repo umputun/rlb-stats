@@ -21,6 +21,7 @@ type Info struct {
 	Files          map[string]int
 }
 
+// newInfo create empty node information
 func newInfo() Info {
 	return Info{
 		Volume:         0,
@@ -31,6 +32,7 @@ func newInfo() Info {
 	}
 }
 
+// update single node information
 func (n *Info) update(l parse.LogEntry) {
 	if n.MinAnswerTime > l.AnswerTime {
 		n.MinAnswerTime = l.AnswerTime
@@ -50,18 +52,15 @@ func NewCandle() (c Candle) {
 	return c
 }
 
+// update log destination node and add same stats to "all" node
 func (c *Candle) update(l parse.LogEntry) {
-	node, ok := c.Nodes[l.DestinationNode]
-	if !ok {
-		node = newInfo()
+	for _, nodeName := range [2]string{l.DestinationNode, "all"} {
+		node, ok := c.Nodes[nodeName]
+		if !ok {
+			node = newInfo()
+		}
+		node.update(l)
+		c.Nodes[nodeName] = node
 	}
-	node.update(l)
-	c.Nodes[l.DestinationNode] = node
-	nodeAll, allOk := c.Nodes["all"]
-	if !allOk {
-		nodeAll = newInfo()
-	}
-	nodeAll.update(l)
-	c.Nodes["all"] = nodeAll
 	c.StartMinute = l.Date
 }
