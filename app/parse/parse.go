@@ -3,7 +3,6 @@ package parse
 import (
 	"log"
 	"regexp"
-	"sort"
 	"time"
 
 	"fmt"
@@ -38,9 +37,8 @@ func New(regEx string) (parser *Parser, err error) {
 // validate regex to make sure it contain right named fields
 func (p *Parser) validate() (err error) {
 	names := p.pattern.SubexpNames()
-	for _, name := range [5]string{"SourceIP", "FileName", "DestinationNode", "AnswerTime", "Date"} {
-		i := sort.SearchStrings(names, name)
-		if i == len(names) {
+	for _, name := range []string{"SourceIP", "FileName", "DestinationNode", "AnswerTime", "Date"} {
+		if !contains(name, names) {
 			log.Printf("[ERROR] '%v' field absent in regexp", name)
 			err = fmt.Errorf("'%v' missing regexp fields", p.pattern)
 		}
@@ -72,4 +70,14 @@ func (p *Parser) Do(line string) (entry LogEntry, err error) {
 	}
 	// FIXME what to return in case of error? Should we return entry, or only error?
 	return entry, err
+}
+
+// contains string in slice
+func contains(src string, inSlice []string) bool {
+	for _, a := range inSlice {
+		if a == src {
+			return true
+		}
+	}
+	return false
 }
