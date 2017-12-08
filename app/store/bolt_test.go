@@ -24,6 +24,6 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	assert.Nil(t, os.Remove("/tmp/test.bd"), "removed fine")
 
 	// broken DB file
-	s, err = NewBolt("/dev/null")
+	_, err = NewBolt("/dev/null")
 	assert.NotNil(t, err, "engine not created")
 }

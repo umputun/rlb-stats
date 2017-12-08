@@ -4,7 +4,7 @@ import (
 	"log"
 )
 
-//const defaultRegEx = "^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - (?P<DestinationNode>.+)$"
+//const defaultRegEx = `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$`
 //const dbFilename = "/tmp/rlb-stats.bd"
 
 // TODO: command-line parameters \ env

@@ -8,8 +8,11 @@ import (
 )
 
 func Test(t *testing.T) {
-	const testString = "2017/09/17 12:54:54.095329 - GET - /api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3"
-	const defaultRegEx = "^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$"
+	const testString = `2017/09/17 12:54:54.095329 - GET - /api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3`
+	const defaultRegEx = `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$`
+	const badRegEx = `([`
+	const wrongRegEx = `^(?P<Date>.+)$`
+	// normal flow
 	parser, err := New(defaultRegEx)
 	assert.Nil(t, err, "parser created")
 	assert.NotNil(t, parser.pattern, "parser pattern is present")
@@ -26,4 +29,9 @@ func Test(t *testing.T) {
 	}
 
 	assert.EqualValues(t, entryParsed, entry, "matches loaded msg")
+	// bad cases
+	_, err = New(badRegEx)
+	assert.NotNil(t, err, "parser failed to be created due to bad regexp")
+	_, err = New(wrongRegEx)
+	assert.NotNil(t, err, "parser failed to be created due to missing fields")
 }

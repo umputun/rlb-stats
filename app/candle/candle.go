@@ -54,7 +54,7 @@ func NewCandle() (c Candle) {
 
 // update log destination node and add same stats to "all" node
 func (c *Candle) update(l parse.LogEntry) {
-	for _, nodeName := range [2]string{l.DestinationNode, "all"} {
+	for _, nodeName := range []string{l.DestinationNode, "all"} {
 		node, ok := c.Nodes[nodeName]
 		if !ok {
 			node = newInfo()
