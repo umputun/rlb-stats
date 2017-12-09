@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"sort"
+
 	"github.com/umputun/rlb-stats/app/candle"
 	"github.com/umputun/rlb-stats/app/parse"
 )
@@ -41,6 +43,7 @@ func do(entries []parse.LogEntry) []candle.Candle {
 	for _, value := range c {
 		candles = append(candles, value)
 	}
-	// FIXME converting map to slice is ugly and make tests impossible
+	// sort the slice to make sure we return test data in same order
+	sort.Slice(candles, func(i, j int) bool { return candles[i].StartMinute.Before(candles[j].StartMinute) })
 	return candles
 }
