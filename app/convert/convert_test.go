@@ -12,29 +12,29 @@ import (
 func TestLogConversion(t *testing.T) {
 	logEntries := []parse.LogEntry{
 		{
-			SourceIP:        "127.0.0.1", // first ip to first file
+			SourceIP:        "127.0.0.1", // access to first file
 			FileName:        "/rtfiles/rt_podcast561.mp3",
 			DestinationNode: "n6.radio-t.com",
 			AnswerTime:      time.Second,
 			Date:            time.Time{},
 		}, {
-			SourceIP:        "127.0.0.1", // first ip to second file
+			SourceIP:        "127.0.0.1", // access to second file
 			FileName:        "/rtfiles/rt_podcast562.mp3",
 			DestinationNode: "n6.radio-t.com",
 			AnswerTime:      time.Second,
 			Date:            time.Time{},
 		}, {
-			SourceIP:        "127.0.0.1", // first ip to second file
-			FileName:        "/rtfiles/rt_podcast561.mp3",
-			DestinationNode: "n6.radio-t.com",
-			AnswerTime:      time.Second,
-			Date:            time.Time{},
-		}, {
-			SourceIP:        "127.0.0.2", // second ip to first file, other minute
+			SourceIP:        "127.0.0.1", // access to first file, other node
 			FileName:        "/rtfiles/rt_podcast561.mp3",
 			DestinationNode: "n7.radio-t.com",
 			AnswerTime:      time.Second,
-			Date:            time.Time{}.Add(time.Minute), // other minute
+			Date:            time.Time{},
+		}, {
+			SourceIP:        "127.0.0.1", // access to first file, other minute
+			FileName:        "/rtfiles/rt_podcast561.mp3",
+			DestinationNode: "n7.radio-t.com",
+			AnswerTime:      time.Second,
+			Date:            time.Time{}.Add(time.Minute),
 		},
 	}
 
