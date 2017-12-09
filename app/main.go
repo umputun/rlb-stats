@@ -8,11 +8,12 @@ import (
 //const dbFilename = "/tmp/rlb-stats.bd"
 
 // TODO: command-line parameters \ env
+// regexp, dbFilename, containerName, debug
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 	//store := getEngine(dbFilename)
-	//parser := parse.New(defaultRegEx)
+	//parser := parгse.New(defaultRegEx)
 }
 
 //func getEngine(boltFile string) store.Engine {

@@ -68,7 +68,6 @@ func (p *Parser) Do(line string) (entry LogEntry, err error) {
 			return entry, err
 		}
 	}
-	// FIXME what to return in case of error? Should we return entry, or only error?
 	return entry, err
 }
 
