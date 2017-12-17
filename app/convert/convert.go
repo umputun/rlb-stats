@@ -10,9 +10,9 @@ import (
 	"github.com/umputun/rlb-stats/app/parse"
 )
 
-// do convert LogEntries into Candles,
+// Do convert LogEntries into Candles,
 // dropping duplicate IP-filename pairs each minute
-func do(entries []parse.LogEntry) []candle.Candle {
+func Do(entries []parse.LogEntry) []candle.Candle {
 	c := make(map[time.Time]candle.Candle)
 	deduplicate := make(map[string]struct{})
 	for _, entry := range entries {

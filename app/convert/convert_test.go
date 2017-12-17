@@ -38,7 +38,7 @@ func TestLogConversion(t *testing.T) {
 		},
 	}
 
-	candles := do(logEntries)
+	candles := Do(logEntries)
 	testCandles := []candle.Candle{
 		{
 			Nodes: map[string]candle.Info{
