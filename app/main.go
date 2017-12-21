@@ -90,15 +90,12 @@ func startLogStreamer(ls logstream.LogStreamer, p *parse.Parser, le *logstream.L
 
 	ls.Go()     // start listening to container logs
 	go func() { // start parser on logs
-		for line := range le.Ch {
+		for line := range le.Ch() {
 			entry, err := p.Do(line)
 			if err == nil {
-				candles := convert.Do(entry)
-				for _, candle := range candles {
-					// will work only in case convert.Do decided to flush entries to disk
+				if candle, ok := convert.Submit(entry); ok { // Submit returns ok in case candle is ready
 					storage.Save(candle)
 				}
-
 			}
 		}
 	}()

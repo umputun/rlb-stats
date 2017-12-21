@@ -6,7 +6,6 @@ import (
 
 	"fmt"
 
-	"github.com/fsouza/go-dockerclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/umputun/rlb-stats/app/parse"
 )
@@ -24,10 +23,10 @@ func TestLogExtraction(t *testing.T) {
 		assert.Nil(t, err, "other half of line written")
 		_, err = lineExtractor.Write([]byte(fmt.Sprint("2017/09/17 12:54:54.095329 - GET - /api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3\n2017/09/17 12:54:54.095329 - GET - /api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3\n")))
 		assert.Nil(t, err, "two lines written")
-		close(lineExtractor.Ch)
+		close(lineExtractor.ch)
 	}()
 
-	for line := range lineExtractor.Ch {
+	for line := range lineExtractor.Ch() {
 		entry, err := parser.Do(line)
 		assert.Nil(t, err, "single line parsed")
 		entries = append(entries, entry)
@@ -42,18 +41,5 @@ func TestLogExtraction(t *testing.T) {
 	}
 	entriesParsed := []parse.LogEntry{entryParsed, entryParsed, entryParsed}
 	assert.Equal(t, entriesParsed, entries, "entries parsed")
-
-}
-
-func TestLogStreamer(t *testing.T) {
-	lineExtractor := NewLineExtractor()
-	dockerClient, _ := docker.NewClient("")
-	logStreamer := LogStreamer{
-		dockerClient,
-		"test",
-		"test",
-		lineExtractor,
-	}
-	assert.NotNil(t, logStreamer, "logStreamer created")
 
 }

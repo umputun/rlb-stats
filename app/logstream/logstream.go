@@ -19,17 +19,6 @@ type LogStreamer struct {
 	LogWriter     io.Writer
 }
 
-// LineExtractor have buffer to store bytes before \n happen and channel to return complete line
-type LineExtractor struct {
-	Ch  chan string
-	buf []byte
-}
-
-// NewLineExtractor create LineExtractor
-func NewLineExtractor() *LineExtractor {
-	return &LineExtractor{Ch: make(chan string)}
-}
-
 // Go activates streamer
 func (l *LogStreamer) Go() {
 	log.Printf("[INFO] start log streamer for %s", l.ContainerName)
@@ -49,6 +38,22 @@ func (l *LogStreamer) Go() {
 	}()
 }
 
+// LineExtractor have buffer to store bytes before \n happen and channel to return complete line
+type LineExtractor struct {
+	ch  chan string
+	buf []byte
+}
+
+// NewLineExtractor create LineExtractor
+func NewLineExtractor() *LineExtractor {
+	return &LineExtractor{ch: make(chan string)}
+}
+
+// Ch expose channel for readonly external access
+func (le *LineExtractor) Ch() <-chan string {
+	return le.ch
+}
+
 // Write complete strings into channel
 func (le *LineExtractor) Write(p []byte) (n int, err error) {
 	le.buf = append(le.buf, p...)
@@ -56,7 +61,7 @@ func (le *LineExtractor) Write(p []byte) (n int, err error) {
 	for bytes.Count(le.buf, []byte{'\n'}) > 0 {
 		if n := bytes.IndexByte(le.buf, '\n'); n >= 0 {
 			line := string(le.buf[:n])
-			le.Ch <- line
+			le.ch <- line
 			le.buf = le.buf[n+1:]
 		}
 	}
