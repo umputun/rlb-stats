@@ -18,9 +18,12 @@ func TestLogExtraction(t *testing.T) {
 	var entries []parse.LogEntry
 
 	go func() {
-		lineExtractor.Write([]byte(fmt.Sprint("2017/09/17 12:54:54.095329 - GET - /api/v1/jump/fil")))
-		lineExtractor.Write([]byte(fmt.Sprint("es?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3\n")))
-		lineExtractor.Write([]byte(fmt.Sprint("2017/09/17 12:54:54.095329 - GET - /api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3\n2017/09/17 12:54:54.095329 - GET - /api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3\n")))
+		_, err := lineExtractor.Write([]byte(fmt.Sprint("2017/09/17 12:54:54.095329 - GET - /api/v1/jump/fil")))
+		assert.Nil(t, err, "half of line written")
+		_, err = lineExtractor.Write([]byte(fmt.Sprint("es?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3\n")))
+		assert.Nil(t, err, "other half of line written")
+		_, err = lineExtractor.Write([]byte(fmt.Sprint("2017/09/17 12:54:54.095329 - GET - /api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3\n2017/09/17 12:54:54.095329 - GET - /api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3\n")))
+		assert.Nil(t, err, "two lines written")
 		close(lineExtractor.ch)
 	}()
 

@@ -55,7 +55,7 @@ func (le *LineExtractor) Write(p []byte) (n int, err error) {
 	for bytes.Count(le.buf, []byte{'\n'}) > 0 {
 		if n := bytes.IndexByte(le.buf, '\n'); n >= 0 {
 			line := string(le.buf[:n])
-			le.ch <- string(line)
+			le.ch <- line
 			le.buf = le.buf[n+1:]
 		}
 	}
