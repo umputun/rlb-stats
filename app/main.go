@@ -7,6 +7,8 @@ import (
 
 	"github.com/jessevdk/go-flags"
 
+	"github.com/fsouza/go-dockerclient"
+	"github.com/umputun/rlb-stats/app/logstream"
 	"github.com/umputun/rlb-stats/app/parse"
 	"github.com/umputun/rlb-stats/app/store"
 )
@@ -31,7 +33,10 @@ func main() {
 	}
 	log.Printf("rlb-stats %s", revision)
 	getEngine(opts.BoltDB)
-	getParser(opts.RegEx)
+	if opts.ContainerName != "" { // start container log streamer and parse logic only if there is container
+		parser := getParser(opts.RegEx)
+		startLogStreamer(opts.ContainerName, parser)
+	}
 }
 
 func getEngine(boltFile string) store.Engine {
@@ -48,4 +53,28 @@ func getParser(regEx string) *parse.Parser {
 		log.Fatalf("[ERROR] can't validate regex, %v", err)
 	}
 	return parser
+}
+
+func startLogStreamer(containerName string, parser *parse.Parser) {
+	var entries []parse.LogEntry
+	le := logstream.NewLineExtractor()
+	dockerClient, err := docker.NewClient("")
+	if err != nil {
+		log.Fatalf("[ERROR] can't initialise docker client, %v", err)
+	}
+	logStreamer := logstream.LogStreamer{
+		DockerClient: dockerClient,
+		ContainerID:  containerName,
+		LogWriter:    le,
+	}
+	logStreamer.Go() // start listening to container logs
+	go func() {      // start parser on logs
+		for line := range le.Ch {
+			entry, err := parser.Do(line)
+			if err == nil {
+				entries = append(entries, entry)
+			}
+		}
+	}()
+	// FIXME this data have to be collected to candles once a minute
 }
