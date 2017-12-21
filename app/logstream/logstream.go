@@ -52,10 +52,12 @@ func (l *LogStreamer) Go() {
 func (le *LineExtractor) Write(p []byte) (n int, err error) {
 	le.buf = append(le.buf, p...)
 
-	if n := bytes.IndexByte(le.buf, '\n'); n >= 0 {
-		line := string(le.buf[:n])
-		le.ch <- string(line)
-		le.buf = bytes.TrimLeft(le.buf, line+"\n")
+	for bytes.Count(le.buf, []byte{'\n'}) > 0 {
+		if n := bytes.IndexByte(le.buf, '\n'); n >= 0 {
+			line := string(le.buf[:n])
+			le.ch <- string(line)
+			le.buf = le.buf[n+1:]
+		}
 	}
 	return len(p), nil
 }
