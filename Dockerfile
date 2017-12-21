@@ -27,4 +27,4 @@ RUN chown -R umputun:umputun /srv
 USER umputun
 
 WORKDIR /srv
-ENTRYPOINT ./rlb-stats
+ENTRYPOINT ["/srv/rlb-stats"]
