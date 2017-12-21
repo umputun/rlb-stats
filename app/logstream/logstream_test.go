@@ -51,6 +51,7 @@ func TestLogStreamer(t *testing.T) {
 	logStreamer := LogStreamer{
 		dockerClient,
 		"test",
+		"test",
 		lineExtractor,
 	}
 	assert.NotNil(t, logStreamer, "logStreamer created")

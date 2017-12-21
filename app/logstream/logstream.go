@@ -13,25 +13,26 @@ import (
 
 // LogStreamer connects and activates container's log stream with io.Writer
 type LogStreamer struct {
-	DockerClient *docker.Client
-	ContainerID  string
-	LogWriter    io.Writer
+	DockerClient  *docker.Client
+	ContainerName string
+	ContainerID   string
+	LogWriter     io.Writer
 }
 
 // LineExtractor have buffer to store bytes before \n happen and channel to return complete line
-type lineExtractor struct {
+type LineExtractor struct {
 	Ch  chan string
 	buf []byte
 }
 
 // NewLineExtractor create LineExtractor
-func NewLineExtractor() *lineExtractor {
-	return &lineExtractor{Ch: make(chan string)}
+func NewLineExtractor() *LineExtractor {
+	return &LineExtractor{Ch: make(chan string)}
 }
 
 // Go activates streamer
 func (l *LogStreamer) Go() {
-	log.Printf("[INFO] start log streamer for %s", l.ContainerID)
+	log.Printf("[INFO] start log streamer for %s", l.ContainerName)
 	go func() {
 		logOpts := docker.LogsOptions{
 			Container:         l.ContainerID,
@@ -49,7 +50,7 @@ func (l *LogStreamer) Go() {
 }
 
 // Write complete strings into channel
-func (le *lineExtractor) Write(p []byte) (n int, err error) {
+func (le *LineExtractor) Write(p []byte) (n int, err error) {
 	le.buf = append(le.buf, p...)
 
 	for bytes.Count(le.buf, []byte{'\n'}) > 0 {

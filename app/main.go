@@ -8,15 +8,17 @@ import (
 	"github.com/jessevdk/go-flags"
 
 	"github.com/fsouza/go-dockerclient"
+	"github.com/umputun/rlb-stats/app/convert"
 	"github.com/umputun/rlb-stats/app/logstream"
 	"github.com/umputun/rlb-stats/app/parse"
 	"github.com/umputun/rlb-stats/app/store"
 )
 
 var opts struct {
-	RegEx         string `long:"regexp" env:"REGEXP" description:"log line regexp" default:"^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$"`
-	ContainerName string `long:"container_name" env:"CONTAINER_NAME" default:"" description:"container name"`
 	BoltDB        string `long:"bolt" env:"BOLT_FILE" default:"/tmp/rlb-stats.bd" description:"boltdb file"`
+	ContainerName string `long:"container_name" env:"CONTAINER_NAME" default:"" description:"container name"`
+	DockerHost    string `short:"d" long:"docker" env:"DOCKER_HOST" default:"unix:///var/run/docker.sock" description:"docker host"`
+	RegEx         string `long:"regexp" env:"REGEXP" description:"log line regexp" default:"^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$"`
 	Dbg           bool   `long:"dbg" description:"debug mode"`
 }
 
@@ -32,10 +34,13 @@ func main() {
 		log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 	}
 	log.Printf("rlb-stats %s", revision)
-	getEngine(opts.BoltDB)
+	storage := getEngine(opts.BoltDB)
 	if opts.ContainerName != "" { // start container log streamer and parse logic only if there is container
 		parser := getParser(opts.RegEx)
-		startLogStreamer(opts.ContainerName, parser)
+		dockerClient := getDocker(opts.DockerHost)
+		logExtractor := logstream.NewLineExtractor()
+		logStreamer := getLogStreamer(dockerClient, opts.ContainerName, logExtractor)
+		startLogStreamer(logStreamer, parser, logExtractor, storage)
 	}
 }
 
@@ -55,26 +60,46 @@ func getParser(regEx string) *parse.Parser {
 	return parser
 }
 
-func startLogStreamer(containerName string, parser *parse.Parser) {
-	var entries []parse.LogEntry
-	le := logstream.NewLineExtractor()
-	dockerClient, err := docker.NewClient("")
+func getDocker(endpoint string) *docker.Client {
+	dockerClient, err := docker.NewClient(endpoint)
 	if err != nil {
 		log.Fatalf("[ERROR] can't initialise docker client, %v", err)
 	}
-	logStreamer := logstream.LogStreamer{
-		DockerClient: dockerClient,
-		ContainerID:  containerName,
-		LogWriter:    le,
+	return dockerClient
+}
+
+func getLogStreamer(d *docker.Client, containerName string, le *logstream.LineExtractor) logstream.LogStreamer {
+	imageInfo, err := d.InspectContainer(containerName)
+	if err != nil {
+		log.Fatalf("[ERROR] can't get container id for %s, %v", containerName, err)
 	}
-	logStreamer.Go() // start listening to container logs
-	go func() {      // start parser on logs
+	if imageInfo.State.Status != "running" {
+		log.Fatalf("[ERROR] container %s is not running, status %s", containerName, imageInfo.State.Status)
+	}
+
+	logStreamer := logstream.LogStreamer{
+		DockerClient:  d,
+		ContainerName: containerName,
+		ContainerID:   imageInfo.ID,
+		LogWriter:     le,
+	}
+	return logStreamer
+}
+
+func startLogStreamer(ls logstream.LogStreamer, p *parse.Parser, le *logstream.LineExtractor, storage store.Engine) {
+
+	ls.Go()     // start listening to container logs
+	go func() { // start parser on logs
 		for line := range le.Ch {
-			entry, err := parser.Do(line)
+			entry, err := p.Do(line)
 			if err == nil {
-				entries = append(entries, entry)
+				candles := convert.Do(entry)
+				for _, candle := range candles {
+					// will work only in case convert.Do decided to flush entries to disk
+					storage.Save(candle)
+				}
+
 			}
 		}
 	}()
-	// FIXME this data have to be collected to candles once a minute
 }
