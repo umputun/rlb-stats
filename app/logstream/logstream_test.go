@@ -6,6 +6,7 @@ import (
 
 	"fmt"
 
+	"github.com/fsouza/go-dockerclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/umputun/rlb-stats/app/parse"
 )
@@ -38,5 +39,17 @@ func TestLogExtraction(t *testing.T) {
 	}
 	entriesParsed := []parse.LogEntry{entryParsed, entryParsed, entryParsed}
 	assert.Equal(t, entriesParsed, entries, "entries parsed")
+
+}
+
+func TestLogStreamer(t *testing.T) {
+	lineExtractor := NewLineExtractor()
+	dockerClient, _ := docker.NewClient("t")
+	logStreamer := LogStreamer{
+		dockerClient,
+		"test",
+		lineExtractor,
+	}
+	assert.NotNil(t, logStreamer, "logStreamer created")
 
 }

@@ -2,6 +2,7 @@ package logstream
 
 import (
 	"io"
+	"io/ioutil"
 	"log"
 	"time"
 
@@ -15,7 +16,6 @@ type LogStreamer struct {
 	DockerClient *docker.Client
 	ContainerID  string
 	LogWriter    io.Writer
-	ErrWriter    io.Writer
 }
 
 // LineExtractor have buffer to store bytes before \n happen and channel to return complete line
@@ -35,8 +35,8 @@ func (l *LogStreamer) Go() {
 	go func() {
 		logOpts := docker.LogsOptions{
 			Container:         l.ContainerID,
-			OutputStream:      l.LogWriter, // logs writer for stdout
-			ErrorStream:       l.ErrWriter, // err writer for stderr
+			OutputStream:      l.LogWriter,    // logs writer for stdout
+			ErrorStream:       ioutil.Discard, // err writer for stderr
 			Tail:              "10",
 			Follow:            true,
 			Stdout:            true,
