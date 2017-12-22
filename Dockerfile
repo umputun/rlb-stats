@@ -27,4 +27,5 @@ RUN chown -R umputun:umputun /srv
 USER umputun
 
 WORKDIR /srv
-ENTRYPOINT ["/srv/rlb-stats"]
+CMD ["/srv/rlb-stats"]
+ENTRYPOINT ["/init.sh"]
