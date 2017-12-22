@@ -3,16 +3,6 @@ workspace:
   path: src/github.com/umputun/rlb-stats
 
 pipeline:
-
-  build:
-    image: golang:1.9-alpine
-    commands:
-      - apk add --no-cache --update tzdata alpine-sdk && cp /usr/share/zoneinfo/America/Chicago /etc/localtime
-      - pwd && ls -la
-      - cd app
-      - go get -v ./...
-      - go test -v ./...
-
   docker:
     image: plugins/docker
     repo: umputun/rlb-stats

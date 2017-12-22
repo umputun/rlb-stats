@@ -17,7 +17,7 @@ import (
 var opts struct {
 	BoltDB        string `long:"bolt" env:"BOLT_FILE" default:"/tmp/rlb-stats.bd" description:"boltdb file"`
 	ContainerName string `long:"container_name" env:"CONTAINER_NAME" default:"" description:"container name"`
-	DockerHost    string `short:"d" long:"docker" env:"DOCKER_HOST" default:"unix:///var/run/docker.sock" description:"docker host"`
+	DockerHost    string `long:"docker" env:"DOCKER_HOST" default:"unix:///var/run/docker.sock" description:"docker host"`
 	RegEx         string `long:"regexp" env:"REGEXP" description:"log line regexp" default:"^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$"`
 	Dbg           bool   `long:"dbg" description:"debug mode"`
 }
