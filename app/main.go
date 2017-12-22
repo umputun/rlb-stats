@@ -94,7 +94,10 @@ func startLogStreamer(ls logstream.LogStreamer, p *parse.Parser, le *logstream.L
 			entry, err := p.Do(line)
 			if err == nil {
 				if candle, ok := convert.Submit(entry); ok { // Submit returns ok in case candle is ready
-					storage.Save(candle)
+					err = storage.Save(candle)
+					if err != nil {
+						log.Printf("[ERROR] couldn't write candle to storage, %v", err)
+					}
 				}
 			}
 		}
