@@ -28,4 +28,4 @@ USER umputun
 
 WORKDIR /srv
 CMD ["/srv/rlb-stats"]
-ENTRYPOINT ["/init.sh"]
+ENTRYPOINT ["/init.sh", "/srv/rlb-stats"]
