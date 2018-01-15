@@ -227,6 +227,18 @@
 			"revisionTime": "2017-12-07T17:19:15Z"
 		},
 		{
+			"checksumSHA1": "YODbzvhUr0Tzp2/MkXflXph2hdY=",
+			"path": "github.com/go-chi/chi",
+			"revision": "e83ac2304db3c50cf03d96a2fcd39009d458bc35",
+			"revisionTime": "2017-12-22T16:11:33Z"
+		},
+		{
+			"checksumSHA1": "biZUshk6kZIfFAyL9pT5FDg2pwA=",
+			"path": "github.com/go-chi/chi/middleware",
+			"revision": "e83ac2304db3c50cf03d96a2fcd39009d458bc35",
+			"revisionTime": "2017-12-22T16:11:33Z"
+		},
+		{
 			"checksumSHA1": "AS/9n/tRsnwrlFum6AZoHM7glP8=",
 			"origin": "github.com/docker/docker/vendor/github.com/gogo/protobuf/proto",
 			"path": "github.com/gogo/protobuf/proto",
