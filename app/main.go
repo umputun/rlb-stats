@@ -11,11 +11,13 @@ import (
 	"github.com/umputun/rlb-stats/app/convert"
 	"github.com/umputun/rlb-stats/app/logstream"
 	"github.com/umputun/rlb-stats/app/parse"
+	"github.com/umputun/rlb-stats/app/rest"
 	"github.com/umputun/rlb-stats/app/store"
 )
 
 var opts struct {
 	BoltDB        string `long:"bolt" env:"BOLT_FILE" default:"/tmp/rlb-stats.bd" description:"boltdb file"`
+	Port          int    `long:"port" env:"PORT" default:"8080" description:"REST server port"`
 	ContainerName string `long:"container_name" env:"CONTAINER_NAME" default:"" description:"container name"`
 	DockerHost    string `long:"docker" env:"DOCKER_HOST" default:"unix:///var/run/docker.sock" description:"docker host"`
 	RegEx         string `long:"regexp" env:"REGEXP" description:"log line regexp" default:"^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$"`
@@ -42,6 +44,11 @@ func main() {
 		logStreamer := getLogStreamer(dockerClient, opts.ContainerName, logExtractor)
 		startLogStreamer(logStreamer, parser, logExtractor, storage)
 	}
+	server := rest.Server{
+		Engine: storage,
+		Port:   opts.Port,
+	}
+	server.Run()
 }
 
 func getEngine(boltFile string) store.Engine {
