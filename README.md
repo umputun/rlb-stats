@@ -1,4 +1,4 @@
-# rlb-stats  [![Build Status](http://drone.umputun.com:9080/api/badges/umputun/rlb-stats/status.svg)](http://drone.umputun.com:9080/umputun/rlb-stats)
+# rlb-stats  [![Build Status](http://drone.umputun.com/api/badges/umputun/rlb-stats/status.svg)](http://drone.umputun.com/umputun/rlb-stats)
 
 Stats collector and reporter for RLB
 
@@ -14,6 +14,7 @@ Stats collector and reporter for RLB
 ### Output parameters
 
     --bolt=           boltdb file (default: /tmp/rlb-stats.bd) [$BOLT_FILE]
+    --port=           REST server port (default: 8080) [$PORT]
 
 ### Minimal requirements
  1. provide `container_name` as an input parameter for docker container
