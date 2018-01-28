@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"errors"
 	"log"
 	"regexp"
 	"time"
@@ -51,6 +52,9 @@ func (p *Parser) validate() (err error) {
 // Do parse log line into LogEntry
 func (p *Parser) Do(line string) (entry LogEntry, err error) {
 	result := p.pattern.FindStringSubmatch(line)
+	if result == nil {
+		return entry, errors.New("can't match line against given regEx")
+	}
 	n := p.pattern.SubexpNames()
 	for i, m := range result {
 		switch n[i] {
