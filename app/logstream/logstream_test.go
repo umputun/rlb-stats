@@ -11,8 +11,9 @@ import (
 )
 
 func TestLogExtraction(t *testing.T) {
-	regEx := `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$`
-	parser, _ := parse.New(regEx)
+	const regEx = `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$`
+	const defaultDateFormat = `2006/01/02 15:04:05`
+	parser, _ := parse.New(regEx, defaultDateFormat)
 	lineExtractor := NewLineExtractor()
 	var entries []parse.LogEntry
 

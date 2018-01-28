@@ -21,6 +21,7 @@ var opts struct {
 	ContainerName string `long:"container_name" env:"CONTAINER_NAME" default:"" description:"container name"`
 	DockerHost    string `long:"docker" env:"DOCKER_HOST" default:"unix:///var/run/docker.sock" description:"docker host"`
 	RegEx         string `long:"regexp" env:"REGEXP" description:"log line regexp" default:"^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$"`
+	DateFormat    string `long:"date_format" env:"DATE_FORMAT" description:"format of the date in log line" default:"2006/01/02 15:04:05"`
 	Dbg           bool   `long:"dbg" description:"debug mode"`
 }
 
@@ -38,7 +39,7 @@ func main() {
 	log.Printf("rlb-stats %s", revision)
 	storage := getEngine(opts.BoltDB)
 	if opts.ContainerName != "" { // start container log streamer and parse logic only if there is container
-		parser := getParser(opts.RegEx)
+		parser := getParser(opts.RegEx, opts.DateFormat)
 		dockerClient := getDocker(opts.DockerHost)
 		logExtractor := logstream.NewLineExtractor()
 		logStreamer := getLogStreamer(dockerClient, opts.ContainerName, logExtractor)
@@ -59,8 +60,8 @@ func getEngine(boltFile string) store.Engine {
 	return storage
 }
 
-func getParser(regEx string) *parse.Parser {
-	parser, err := parse.New(regEx)
+func getParser(regEx string, dateFormat string) *parse.Parser {
+	parser, err := parse.New(regEx, dateFormat)
 	if err != nil {
 		log.Fatalf("[ERROR] can't validate regex, %v", err)
 	}

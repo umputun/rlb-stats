@@ -10,7 +10,8 @@ import (
 
 // Parser contain validated regular expression for parsing logs
 type Parser struct {
-	pattern *regexp.Regexp
+	pattern    *regexp.Regexp
+	dateFormat string
 }
 
 // LogEntry contains meaningful data extracted from single log line
@@ -23,8 +24,9 @@ type LogEntry struct {
 }
 
 // New checks if regular expression valid for parsing LogEntry
-func New(regEx string) (parser *Parser, err error) {
+func New(regEx string, dateFormat string) (parser *Parser, err error) {
 	parser = &Parser{}
+	parser.dateFormat = dateFormat
 	parser.pattern, err = regexp.Compile(regEx)
 	if err != nil {
 		log.Printf("[ERROR] regexp '%v' could not be compiled: '%v'", regEx, err)
@@ -62,7 +64,7 @@ func (p *Parser) Do(line string) (entry LogEntry, err error) {
 		case "AnswerTime":
 			entry.AnswerTime, err = time.ParseDuration(m)
 		case "Date":
-			entry.Date, err = time.Parse(`2006/01/02 15:04:05`, m)
+			entry.Date, err = time.Parse(p.dateFormat, m)
 		}
 		if err != nil {
 			return entry, err
