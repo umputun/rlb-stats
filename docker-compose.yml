@@ -1,0 +1,27 @@
+version: '3'
+services:
+
+    rlb-stats:
+        build: .
+        image: umputun/rlb-stats:latest
+        hostname: rlb-stats
+        container_name: rlb-stats
+
+        logging:
+          driver: json-file
+          options:
+              max-size: "10m"
+              max-file: "5"
+
+        volumes:
+            - /tmp:/tmp
+            - /var/run/docker.sock:/var/run/docker.sock
+
+        ports:
+            - "8080:8080"
+
+#        environment:
+#            - REGEXP=^(?P<SourceIP>.+) - - \[(?P<Date>.+)\] "GET (?P<FileName>.+) (?:.+)" 200 (?P<AnswerTime>.+) "(?P<DestinationNode>.+?)" "(?:.+)" "-"$$
+#            - DATE_FORMAT=02/Jan/2006:15:04:05 -0700
+#            - CONTAINER_NAME=nginx
+

@@ -60,6 +60,7 @@ func (s *Bolt) Save(candle candle.Candle) (err error) {
 
 // Load Candles by period
 func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []candle.Candle, err error) {
+	result = make([]candle.Candle, 0)
 	err = s.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucket)
 		c := b.Cursor()

@@ -1,14 +1,13 @@
 package rest
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
 	"log"
 
 	"time"
-
-	"encoding/json"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -23,6 +22,12 @@ type JSON map[string]interface{}
 type Server struct {
 	Engine store.Engine
 	Port   int
+}
+
+func sendErrorJSON(w http.ResponseWriter, r *http.Request, code int, err error, details string) {
+	log.Printf("[WARN] %s", details)
+	render.Status(r, code)
+	render.JSON(w, r, JSON{"error": err.Error(), "details": details})
 }
 
 // Run starts a web-server
@@ -44,37 +49,28 @@ func (s *Server) Run() {
 func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	if from == "" {
-		log.Print("[WARN] no 'from' in get request")
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, JSON{"error": "no 'from' field passed"})
+		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("no 'from' field passed"), "")
 		return
 	}
 	fromTime, err := time.Parse(time.RFC3339, from)
 	if err != nil {
-		log.Print("[WARN] can't parse 'from' field")
-		render.Status(r, http.StatusExpectationFailed)
-		render.JSON(w, r, JSON{"error": err.Error()})
+		sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'from' field")
 		return
 	}
 	toTime := time.Now()
 	if to := r.URL.Query().Get("to"); to != "" {
 		t, terr := time.Parse(time.RFC3339, to)
 		if terr != nil {
-			log.Print("[WARN] can't parse 'to' field")
-			render.Status(r, http.StatusExpectationFailed)
-			render.JSON(w, r, JSON{"error": terr.Error()})
+			sendErrorJSON(w, r, http.StatusExpectationFailed, terr, "can't parse 'to' field")
 			return
 		}
 		toTime = t
 	}
 	candles, err := s.Engine.Load(fromTime, toTime)
 	if err != nil {
-		log.Print("[WARN] can't load candles")
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, JSON{"error": err.Error()})
+		sendErrorJSON(w, r, http.StatusBadRequest, err, "can't load candles")
 		return
 	}
-	candlesJSON, _ := json.Marshal(candles)
 	render.Status(r, http.StatusOK)
-	render.JSON(w, r, candlesJSON)
+	render.JSON(w, r, candles)
 }
