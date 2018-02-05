@@ -20,6 +20,7 @@ var opts struct {
 	Port          int    `long:"port" env:"PORT" default:"8080" description:"REST server port"`
 	ContainerName string `long:"container_name" env:"CONTAINER_NAME" default:"" description:"container name"`
 	DockerHost    string `long:"docker" env:"DOCKER_HOST" default:"unix:///var/run/docker.sock" description:"docker host"`
+	LogTail       string `long:"log_tail" env:"LOG_TAIL" default:"0" description:"How many log entries to load from container, set to 'all' on the first run"`
 	RegEx         string `long:"regexp" env:"REGEXP" description:"log line regexp" default:"^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$"`
 	DateFormat    string `long:"date_format" env:"DATE_FORMAT" description:"format of the date in log line" default:"2006/01/02 15:04:05"`
 	Dbg           bool   `long:"dbg" description:"debug mode"`
@@ -42,7 +43,7 @@ func main() {
 		parser := getParser(opts.RegEx, opts.DateFormat)
 		dockerClient := getDocker(opts.DockerHost)
 		logExtractor := logstream.NewLineExtractor()
-		logStreamer := getLogStreamer(dockerClient, opts.ContainerName, logExtractor)
+		logStreamer := getLogStreamer(dockerClient, opts.ContainerName, opts.LogTail, logExtractor)
 		startLogStreamer(logStreamer, parser, logExtractor, storage)
 	}
 	server := rest.Server{
@@ -76,7 +77,7 @@ func getDocker(endpoint string) *docker.Client {
 	return dockerClient
 }
 
-func getLogStreamer(d *docker.Client, containerName string, le *logstream.LineExtractor) logstream.LogStreamer {
+func getLogStreamer(d *docker.Client, containerName string, tailOption string, le *logstream.LineExtractor) logstream.LogStreamer {
 	imageInfo, err := d.InspectContainer(containerName)
 	if err != nil {
 		log.Fatalf("[ERROR] can't get container id for %s, %v", containerName, err)
@@ -90,6 +91,7 @@ func getLogStreamer(d *docker.Client, containerName string, le *logstream.LineEx
 		ContainerName: containerName,
 		ContainerID:   imageInfo.ID,
 		LogWriter:     le,
+		Tail:          tailOption,
 	}
 	return logStreamer
 }

@@ -16,6 +16,7 @@ type LogStreamer struct {
 	DockerClient  *docker.Client
 	ContainerName string
 	ContainerID   string
+	Tail          string
 	LogWriter     io.Writer
 }
 
@@ -27,7 +28,7 @@ func (l *LogStreamer) Go() {
 			Container:         l.ContainerID,
 			OutputStream:      l.LogWriter,    // logs writer for stdout
 			ErrorStream:       ioutil.Discard, // err writer for stderr
-			Tail:              "10",
+			Tail:              l.Tail,
 			Follow:            true,
 			Stdout:            true,
 			Stderr:            true,
