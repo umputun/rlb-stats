@@ -43,4 +43,8 @@ func TestLogExtraction(t *testing.T) {
 	entriesParsed := []parse.LogEntry{entryParsed, entryParsed, entryParsed}
 	assert.Equal(t, entriesParsed, entries, "entries parsed")
 
+	// check what LogStreamer.Go is able to be run
+	var streamer = LogStreamer{}
+	streamer.Go()
+
 }
