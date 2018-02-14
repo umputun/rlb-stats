@@ -7,6 +7,6 @@ import (
 )
 
 // Do aggregate candles in input, 0 maxPoints is unlimited
-func Do(candles *[]candle.Candle, aggInterval time.Duration, maxPoints int) {
+func Do(candles *[]candle.Candle, aggInterval time.Duration) {
 
 }
