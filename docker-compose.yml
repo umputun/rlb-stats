@@ -3,9 +3,12 @@ services:
 
     rlb-stats:
         build: .
-        image: umputun/rlb-stats:latest
+        image: umputun/rlb-stats:testing
         hostname: rlb-stats
+        restart: "no"
+        command: --dbg
         container_name: rlb-stats
+        user: "0"
 
         logging:
           driver: json-file

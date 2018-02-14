@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"log"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+	"github.com/umputun/rlb-stats/app/aggregate"
 	"github.com/umputun/rlb-stats/app/store"
 )
 
@@ -38,14 +40,26 @@ func (s *Server) Run() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	r.Route("/api/v1", func(r chi.Router) {
+	r.Route("/api", func(r chi.Router) {
 		r.Get("/candle", s.getCandle)
+		r.Get("/grafana/", s.root) // https://github.com/grafana/simple-json-datasource implementation
+		r.Get("/grafana/search", s.root)
+		r.Get("/grafana/query", s.root)
+		r.Get("/grafana/annotations", s.root)
 	})
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", s.Port), r))
 }
 
-// GET /v1/candle
+// GET /grafana/
+// dummy answer
+func (s *Server) root(w http.ResponseWriter, r *http.Request) {
+	log.Printf("%v: %v", r.URL.Path, r.Method)
+	render.Status(r, http.StatusOK)
+	render.JSON(w, r, JSON{"status": "ok"})
+}
+
+// GET /candle
 func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	if from == "" {
@@ -70,6 +84,23 @@ func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		sendErrorJSON(w, r, http.StatusBadRequest, err, "can't load candles")
 		return
+	}
+	if a := r.URL.Query().Get("aggregate"); a != "" {
+		duration, err := time.ParseDuration(a)
+		if err != nil {
+			sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'aggregate' field")
+			return
+		}
+		var maxPoints = 0
+		if mp := r.URL.Query().Get("max_points"); mp != "" {
+			mInt, err := strconv.Atoi(mp)
+			if err != nil {
+				sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'max_points' field")
+				return
+			}
+			maxPoints = mInt
+		}
+		aggregate.Do(&candles, duration, maxPoints)
 	}
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, candles)
