@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"log"
 
@@ -91,16 +90,7 @@ func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 			sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'aggregate' field")
 			return
 		}
-		var maxPoints = 0
-		if mp := r.URL.Query().Get("max_points"); mp != "" {
-			mInt, err := strconv.Atoi(mp)
-			if err != nil {
-				sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'max_points' field")
-				return
-			}
-			maxPoints = mInt
-		}
-		aggregate.Do(&candles, duration, maxPoints)
+		aggregate.Do(&candles, duration)
 	}
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, candles)
