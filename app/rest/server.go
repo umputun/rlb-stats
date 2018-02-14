@@ -90,7 +90,9 @@ func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 			sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'aggregate' field")
 			return
 		}
-		aggregate.Do(&candles, duration)
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, aggregate.Do(candles, duration))
+		return
 	}
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, candles)

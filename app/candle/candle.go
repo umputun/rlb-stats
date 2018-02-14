@@ -21,8 +21,8 @@ type Info struct {
 	Files          map[string]int
 }
 
-// newInfo create empty node information
-func newInfo() Info {
+// NewInfo create empty node information
+func NewInfo() Info {
 	return Info{
 		Volume:         0,
 		MinAnswerTime:  time.Hour,
@@ -57,7 +57,7 @@ func (c *Candle) Update(l parse.LogEntry) {
 	for _, nodeName := range []string{l.DestinationNode, "all"} {
 		node, ok := c.Nodes[nodeName]
 		if !ok {
-			node = newInfo()
+			node = NewInfo()
 		}
 		node.update(l)
 		c.Nodes[nodeName] = node

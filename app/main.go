@@ -46,11 +46,11 @@ func main() {
 		logStreamer := getLogStreamer(dockerClient, opts.ContainerName, opts.LogTail, logExtractor)
 		startLogStreamer(logStreamer, parser, logExtractor, storage)
 	}
-	server := rest.Server{
+	serv := rest.Server{
 		Engine: storage,
 		Port:   opts.Port,
 	}
-	server.Run()
+	serv.Run()
 }
 
 func getEngine(boltFile string) store.Engine {
