@@ -15,6 +15,7 @@ func Test(t *testing.T) {
 	const wrongRegEx = `^(?P<FileName>.+)$`
 	const defaultDateFormat = `2006/01/02 15:04:05`
 	const badDateFormat = `gabbish`
+
 	// normal flow
 	parser, err := New(defaultRegEx, defaultDateFormat)
 	assert.Nil(t, err, "parser created")
