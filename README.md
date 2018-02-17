@@ -31,3 +31,22 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
        --bolt=           boltdb file (default: /tmp/rlb-stats.bd) [$BOLT_FILE]
        --port=           REST server port (default: 8080) [$PORT]
        --dbg             debug mode
+       
+       
+## API
+
+### Load candles
+
+`GET /api/candle`, parameters - `?from=<RFC3339_date>&to=<RFC3339_date>&aggregate=<duration>`
+
+- `from` (required) is the beginning of the interval, format example is `2006-01-02T15:04:05+07:00`
+- `to` (optional) is the end of the interval
+- `aggregate` (optional) is the aggregation interval (truncated to minute), format examples are `5m`, `600s`, `1h`
+    ```
+        $ http GET http://localhost:8080/api/candle? from=2017-03-24T15:04:00+03:00 & to=2018-01-02T15:04:00+03:00 & aggregate=10m
+
+        HTTP/1.1 200 OK
+
+        [
+        ]
+    ```
