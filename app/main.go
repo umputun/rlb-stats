@@ -8,7 +8,6 @@ import (
 	"github.com/jessevdk/go-flags"
 
 	"github.com/fsouza/go-dockerclient"
-	"github.com/umputun/rlb-stats/app/convert"
 	"github.com/umputun/rlb-stats/app/logstream"
 	"github.com/umputun/rlb-stats/app/parse"
 	"github.com/umputun/rlb-stats/app/rest"
@@ -103,7 +102,7 @@ func startLogStreamer(ls logstream.LogStreamer, p *parse.Parser, le *logstream.L
 		for line := range le.Ch() {
 			entry, err := p.Do(line)
 			if err == nil {
-				if candle, ok := convert.Submit(entry); ok { // Submit returns ok in case candle is ready
+				if candle, ok := p.Submit(entry); ok { // Submit returns ok in case candle is ready
 					err = storage.Save(candle)
 					if err != nil {
 						log.Printf("[ERROR] couldn't write candle to storage, %v", err)

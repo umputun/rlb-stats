@@ -5,7 +5,72 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/umputun/rlb-stats/app/candle"
 )
+
+var testsTable = []struct {
+	in     candle.LogEntry
+	out    candle.Candle
+	dumped bool
+}{
+	{candle.LogEntry{
+		SourceIP:        "127.0.0.1", // access to first file
+		FileName:        "/rtfiles/rt_podcast561.mp3",
+		DestinationNode: "n6.radio-t.com",
+		AnswerTime:      time.Second,
+		Date:            time.Time{},
+	},
+		candle.Candle{}, // empty, not yet dumped
+		false},
+	{candle.LogEntry{
+		SourceIP:        "127.0.0.1", // access to second file
+		FileName:        "/rtfiles/rt_podcast562.mp3",
+		DestinationNode: "n6.radio-t.com",
+		AnswerTime:      time.Second,
+		Date:            time.Time{},
+	},
+		candle.Candle{}, // empty, not yet dumped
+		false},
+	{candle.LogEntry{
+		SourceIP:        "127.0.0.1", // access to first file, other node
+		FileName:        "/rtfiles/rt_podcast561.mp3",
+		DestinationNode: "n7.radio-t.com",
+		AnswerTime:      time.Second,
+		Date:            time.Time{},
+	},
+		candle.Candle{}, // empty, not yet dumped
+		false},
+	{candle.LogEntry{
+		SourceIP:        "127.0.0.1", // access to first file, other minute
+		FileName:        "/rtfiles/rt_podcast561.mp3",
+		DestinationNode: "n7.radio-t.com",
+		AnswerTime:      time.Second,
+		Date:            time.Time{}.Add(time.Minute),
+	},
+		candle.Candle{ // from first 3 entries
+			Nodes: map[string]candle.Info{
+				"n6.radio-t.com": {Volume: 2, MinAnswerTime: time.Second, MeanAnswerTime: time.Second, MaxAnswerTime: time.Second, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1, "/rtfiles/rt_podcast562.mp3": 1}},
+				"all":            {Volume: 2, MinAnswerTime: time.Second, MeanAnswerTime: time.Second, MaxAnswerTime: time.Second, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1, "/rtfiles/rt_podcast562.mp3": 1}},
+			},
+			StartMinute: time.Time{},
+		},
+		true},
+	{candle.LogEntry{
+		SourceIP:        "127.0.0.1", // access in third minute, will not be flushed into resultCandle
+		FileName:        "/rtfiles/rt_podcast561.mp3",
+		DestinationNode: "n7.radio-t.com",
+		AnswerTime:      time.Second,
+		Date:            time.Time{}.Add(time.Minute * 2),
+	},
+		candle.Candle{ // from 4th entry
+			Nodes: map[string]candle.Info{
+				"n7.radio-t.com": {Volume: 1, MinAnswerTime: time.Second, MeanAnswerTime: time.Second, MaxAnswerTime: time.Second, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
+				"all":            {Volume: 1, MinAnswerTime: time.Second, MeanAnswerTime: time.Second, MaxAnswerTime: time.Second, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
+			},
+			StartMinute: time.Time{}.Add(time.Minute),
+		},
+		true},
+}
 
 func Test(t *testing.T) {
 	const testString = `2017/09/17 12:54:54.095329 - GET - /api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3`
@@ -24,7 +89,7 @@ func Test(t *testing.T) {
 	entry, err := parser.Do(testString)
 	assert.Nil(t, err, "string parsed")
 
-	entryParsed := LogEntry{
+	entryParsed := candle.LogEntry{
 		SourceIP:        "213.87.120.120",
 		FileName:        "/api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n6.radio-t.com",
@@ -46,4 +111,11 @@ func Test(t *testing.T) {
 	assert.NotNil(t, err, "parser failed to be created due to bad regexp")
 	_, err = New(wrongRegEx, defaultDateFormat)
 	assert.NotNil(t, err, "parser failed to be created due to missing fields")
+
+	// test LogEntry conversion to Candle
+	for _, testPair := range testsTable {
+		resultCandle, ok := parser.Submit(testPair.in)
+		assert.EqualValues(t, testPair.out, resultCandle, "candle match with expected output")
+		assert.EqualValues(t, testPair.dumped, ok, "entry (not) dumped")
+	}
 }

@@ -5,14 +5,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/umputun/rlb-stats/app/parse"
 )
 
 var testsTable = []struct {
-	in  parse.LogEntry
+	in  LogEntry
 	out Candle
 }{
-	{parse.LogEntry{
+	{LogEntry{
 		SourceIP:        "127.0.0.1",
 		FileName:        "/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n6.radio-t.com",
@@ -27,7 +26,7 @@ var testsTable = []struct {
 			StartMinute: time.Time{},
 		},
 	},
-	{parse.LogEntry{
+	{LogEntry{
 		SourceIP:        "127.0.0.3",
 		FileName:        "/rtfiles/rt_podcast562.mp3",
 		DestinationNode: "n7.radio-t.com",
@@ -43,7 +42,7 @@ var testsTable = []struct {
 			StartMinute: time.Time{},
 		},
 	},
-	{parse.LogEntry{
+	{LogEntry{
 		SourceIP:        "127.0.0.2",
 		FileName:        "/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n7.radio-t.com",

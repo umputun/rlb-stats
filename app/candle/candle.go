@@ -2,8 +2,6 @@ package candle
 
 import (
 	"time"
-
-	"github.com/umputun/rlb-stats/app/parse"
 )
 
 // Candle contain one minute candle from log entries for that period
@@ -32,8 +30,17 @@ func NewInfo() Info {
 	}
 }
 
+// LogEntry contains meaningful data extracted from single log line
+type LogEntry struct {
+	SourceIP        string
+	FileName        string
+	DestinationNode string
+	AnswerTime      time.Duration
+	Date            time.Time
+}
+
 // update single node information
-func (n *Info) update(l parse.LogEntry) {
+func (n *Info) update(l LogEntry) {
 	if n.MinAnswerTime > l.AnswerTime {
 		n.MinAnswerTime = l.AnswerTime
 	}
@@ -53,7 +60,7 @@ func NewCandle() (c Candle) {
 }
 
 // Update log destination node and add same stats to "all" node
-func (c *Candle) Update(l parse.LogEntry) {
+func (c *Candle) Update(l LogEntry) {
 	for _, nodeName := range []string{l.DestinationNode, "all"} {
 		node, ok := c.Nodes[nodeName]
 		if !ok {

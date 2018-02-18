@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/umputun/rlb-stats/app/candle"
 	"github.com/umputun/rlb-stats/app/parse"
 )
 
@@ -15,7 +16,7 @@ func TestLogExtraction(t *testing.T) {
 	const defaultDateFormat = `2006/01/02 15:04:05`
 	parser, _ := parse.New(regEx, defaultDateFormat)
 	lineExtractor := NewLineExtractor()
-	var entries []parse.LogEntry
+	var entries []candle.LogEntry
 
 	go func() {
 		_, err := lineExtractor.Write([]byte(fmt.Sprint("2017/09/17 12:54:54.095329 - GET - /api/v1/jump/fil")))
@@ -33,14 +34,14 @@ func TestLogExtraction(t *testing.T) {
 		entries = append(entries, entry)
 	}
 
-	entryParsed := parse.LogEntry{
+	entryParsed := candle.LogEntry{
 		SourceIP:        "213.87.120.120",
 		FileName:        "/api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n6.radio-t.com",
 		AnswerTime:      time.Nanosecond * 710679,
 		Date:            time.Date(2017, 9, 17, 12, 54, 54, 95329000, time.Time{}.Location()),
 	}
-	entriesParsed := []parse.LogEntry{entryParsed, entryParsed, entryParsed}
+	entriesParsed := []candle.LogEntry{entryParsed, entryParsed, entryParsed}
 	assert.Equal(t, entriesParsed, entries, "entries parsed")
 
 	// check what LogStreamer.Go is able to be run
