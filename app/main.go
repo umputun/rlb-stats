@@ -7,8 +7,8 @@ import (
 
 	"github.com/jessevdk/go-flags"
 
+	"github.com/umputun/rlb-stats/app/api"
 	"github.com/umputun/rlb-stats/app/logservice"
-	"github.com/umputun/rlb-stats/app/rest"
 	"github.com/umputun/rlb-stats/app/store"
 )
 
@@ -47,7 +47,7 @@ func main() {
 		}
 		logServ.Go()
 	}
-	serv := rest.Server{
+	serv := api.Server{
 		Engine: storage,
 		Port:   opts.Port,
 	}
