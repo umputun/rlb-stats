@@ -78,7 +78,7 @@ func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		render.Status(r, http.StatusOK)
-		render.JSON(w, r, store.AggregateCandles(candles, duration))
+		render.JSON(w, r, aggregateCandles(candles, duration))
 		return
 	}
 	render.Status(r, http.StatusOK)
