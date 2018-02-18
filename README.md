@@ -18,19 +18,17 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
     
 ## Application parameters
 
-### Input parameters
-
-       --container_name= container name [$CONTAINER_NAME]
-       --docker=         docker host (default: unix:///var/run/docker.sock) [$DOCKER_HOST]
-       --log_tail=       How many log entries to load from container, set to 'all' on the first run (default: 0) [$LOG_TAIL]
-       --regexp=         log line regexp (default: ^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$) [$REGEXP]
-       --date_format=    format of the date in log line (default: 2006/01/02 15:04:05) [$DATE_FORMAT]
-
-### Output parameters
-
-       --bolt=           boltdb file (default: /tmp/rlb-stats.bd) [$BOLT_FILE]
-       --port=           REST server port (default: 8080) [$PORT]
-       --dbg             debug mode
+    # input parameters
+    --container_name= container name [$CONTAINER_NAME]
+    --docker=         docker host (default: unix:///var/run/docker.sock) [$DOCKER_HOST]
+    --log_tail=       How many log entries to load from container, set to 'all' on the first run (default: 0) [$LOG_TAIL]
+    --regexp=         log line regexp (default: ^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$) [$REGEXP]
+    --date_format=    format of the date in log line (default: 2006/01/02 15:04:05) [$DATE_FORMAT]
+           
+    # output parameters
+    --bolt=           boltdb file (default: /tmp/rlb-stats.bd) [$BOLT_FILE]
+    --port=           web server port (default: 8080) [$PORT]
+    --dbg             debug mode
        
        
 ## API
