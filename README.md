@@ -46,79 +46,81 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
 #### Example
 
 <details>
-<summary>`api/candle`</summary>
-    ```
-        $ http GET http://localhost:8080/api/candle?from=2018-02-18T15:35:00-00:00&to=2018-02-18T15:38:00-00:00&aggregate=2m
-        
-        HTTP/1.1 200 OK
-        Content-Type: application/json
-        
-        [
-          {
-            "Nodes": {
-              "n6.radio-t.com": {
-                "Volume": 1,
-                "MinAnswerTime": 1,
-                "MeanAnswerTime": 1,
-                "MaxAnswerTime": 1,
-                "Files": {
-                  "rt_podcast585.mp3": 1
-                }
-              },
-              "n7.radio-t.com": {
-                "Volume": 1,
-                "MinAnswerTime": 2,
-                "MeanAnswerTime": 2,
-                "MaxAnswerTime": 2,
-                "Files": {
-                  "rt_podcast584.mp3": 1,
-                }
-              },
-              "all": {
-                "Volume": 2,
-                "MinAnswerTime": 1,
-                "MeanAnswerTime": 1.5,
-                "MaxAnswerTime": 2,
-                "Files": {
-                  "rt_podcast584.mp3": 1,
-                  "rt_podcast585.mp3": 1
-                }
-              }
-            },
-            "StartMinute": "2018-02-18T15:35:00Z"
-          },
-          {
-            "Nodes": {
-              "n6.radio-t.com": {
-                "Volume": 5,
-                "MinAnswerTime": 1,
-                "MeanAnswerTime": 1,
-                "MaxAnswerTime": 1,
-                "Files": {
-                  "rt_podcast579.mp3": 1,
-                  "rt_podcast581.mp3": 1,
-                  "rt_podcast583.mp3": 1,
-                  "rt_podcast584.mp3": 1,
-                  "rt_podcast585.mp3": 1
-                }
-              },
-              "all": {
-                "Volume": 5,
-                "MinAnswerTime": 1,
-                "MeanAnswerTime": 1,
-                "MaxAnswerTime": 1,
-                "Files": {
-                  "rt_podcast579.mp3": 1,
-                  "rt_podcast581.mp3": 1,
-                  "rt_podcast583.mp3": 1,
-                  "rt_podcast584.mp3": 1,
-                  "rt_podcast585.mp3": 1
-                }
-              }
-            },
-            "StartMinute": "2018-02-18T15:37:00Z"
-          }
-        ]
-    ```
+<summary>api/candle</summary>
+
+```json
+$ http GET http://localhost:8080/api/candle?from=2018-02-18T15:35:00-00:00&to=2018-02-18T15:38:00-00:00&aggregate=2m
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+[
+  {
+    "Nodes": {
+      "n6.radio-t.com": {
+        "Volume": 1,
+        "MinAnswerTime": 1,
+        "MeanAnswerTime": 1,
+        "MaxAnswerTime": 1,
+        "Files": {
+          "rt_podcast585.mp3": 1
+        }
+      },
+      "n7.radio-t.com": {
+        "Volume": 1,
+        "MinAnswerTime": 2,
+        "MeanAnswerTime": 2,
+        "MaxAnswerTime": 2,
+        "Files": {
+          "rt_podcast584.mp3": 1,
+        }
+      },
+      "all": {
+        "Volume": 2,
+        "MinAnswerTime": 1,
+        "MeanAnswerTime": 1.5,
+        "MaxAnswerTime": 2,
+        "Files": {
+          "rt_podcast584.mp3": 1,
+          "rt_podcast585.mp3": 1
+        }
+      }
+    },
+    "StartMinute": "2018-02-18T15:35:00Z"
+  },
+  {
+    "Nodes": {
+      "n6.radio-t.com": {
+        "Volume": 5,
+        "MinAnswerTime": 1,
+        "MeanAnswerTime": 1,
+        "MaxAnswerTime": 1,
+        "Files": {
+          "rt_podcast579.mp3": 1,
+          "rt_podcast581.mp3": 1,
+          "rt_podcast583.mp3": 1,
+          "rt_podcast584.mp3": 1,
+          "rt_podcast585.mp3": 1
+        }
+      },
+      "all": {
+        "Volume": 5,
+        "MinAnswerTime": 1,
+        "MeanAnswerTime": 1,
+        "MaxAnswerTime": 1,
+        "Files": {
+          "rt_podcast579.mp3": 1,
+          "rt_podcast581.mp3": 1,
+          "rt_podcast583.mp3": 1,
+          "rt_podcast584.mp3": 1,
+          "rt_podcast585.mp3": 1
+        }
+      }
+    },
+    "StartMinute": "2018-02-18T15:37:00Z"
+  }
+]
+```
+
 </details>
 
