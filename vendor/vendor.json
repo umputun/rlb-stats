@@ -58,6 +58,36 @@
 			"revisionTime": "2017-08-14T20:04:35Z"
 		},
 		{
+			"checksumSHA1": "w3hB0c3IiqJNdDaAK+Z3O3UVxdo=",
+			"path": "github.com/didip/tollbooth",
+			"revision": "b65680a2d5f624ed528d36f8406f31535555828a",
+			"revisionTime": "2017-11-18T22:44:42Z"
+		},
+		{
+			"checksumSHA1": "TH1jNcNejXHDDjQge0Bpq4lrzFY=",
+			"path": "github.com/didip/tollbooth/errors",
+			"revision": "b65680a2d5f624ed528d36f8406f31535555828a",
+			"revisionTime": "2017-11-18T22:44:42Z"
+		},
+		{
+			"checksumSHA1": "t51vPudMi7asckui55HX2KAD14c=",
+			"path": "github.com/didip/tollbooth/libstring",
+			"revision": "b65680a2d5f624ed528d36f8406f31535555828a",
+			"revisionTime": "2017-11-18T22:44:42Z"
+		},
+		{
+			"checksumSHA1": "r+53yY3y9gpBXeXrtQ4LAgrf2JM=",
+			"path": "github.com/didip/tollbooth/limiter",
+			"revision": "b65680a2d5f624ed528d36f8406f31535555828a",
+			"revisionTime": "2017-11-18T22:44:42Z"
+		},
+		{
+			"checksumSHA1": "nGZOJx/hcIqoGlEYP9o8kQ1LBmY=",
+			"path": "github.com/didip/tollbooth_chi",
+			"revision": "6ab5f3083f3d925e1944d58cdaebf43bbbff9238",
+			"revisionTime": "2017-09-28T04:18:46Z"
+		},
+		{
 			"checksumSHA1": "b91BIyJbqy05pXpEh1eGCJkdjYc=",
 			"path": "github.com/docker/docker/api/types",
 			"revision": "9f5540f672e618667a8a3f185193232cc4d52617",
@@ -293,6 +323,13 @@
 			"revisionTime": "2017-12-08T00:53:56Z"
 		},
 		{
+			"checksumSHA1": "SQi5yeNb9HnAMRpEhQgcv9x9yKc=",
+			"origin": "github.com/didip/tollbooth/vendor/github.com/patrickmn/go-cache",
+			"path": "github.com/patrickmn/go-cache",
+			"revision": "b65680a2d5f624ed528d36f8406f31535555828a",
+			"revisionTime": "2017-11-18T22:44:42Z"
+		},
+		{
 			"checksumSHA1": "PdQm3s8DoVJ17Vk8n7o5iPa7PK0=",
 			"origin": "github.com/docker/docker/vendor/github.com/pkg/errors",
 			"path": "github.com/pkg/errors",
@@ -350,6 +387,13 @@
 			"path": "golang.org/x/sys/windows",
 			"revision": "9f5540f672e618667a8a3f185193232cc4d52617",
 			"revisionTime": "2017-12-08T00:53:56Z"
+		},
+		{
+			"checksumSHA1": "9hD4AQ4ZUsNhL7jKSyPzPIXcrj8=",
+			"origin": "github.com/didip/tollbooth/vendor/golang.org/x/time/rate",
+			"path": "golang.org/x/time/rate",
+			"revision": "b65680a2d5f624ed528d36f8406f31535555828a",
+			"revisionTime": "2017-11-18T22:44:42Z"
 		}
 	],
 	"rootPath": "github.com/umputun/rlb-stats"
