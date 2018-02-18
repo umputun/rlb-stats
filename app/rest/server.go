@@ -41,21 +41,9 @@ func (s *Server) Run() {
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/candle", s.getCandle)
-		r.Get("/grafana/", s.root) // https://github.com/grafana/simple-json-datasource implementation
-		r.Get("/grafana/search", s.root)
-		r.Get("/grafana/query", s.root)
-		r.Get("/grafana/annotations", s.root)
 	})
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", s.Port), r))
-}
-
-// GET /grafana/
-// dummy answer
-func (s *Server) root(w http.ResponseWriter, r *http.Request) {
-	log.Printf("%v: %v", r.URL.Path, r.Method)
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, JSON{"status": "ok"})
 }
 
 // GET /candle
