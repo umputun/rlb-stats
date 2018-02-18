@@ -1,69 +1,69 @@
-package parse
+package logservice
 
 import (
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/umputun/rlb-stats/app/candle"
+	"github.com/umputun/rlb-stats/app/store"
 )
 
 var testsTable = []struct {
-	in     candle.LogEntry
-	out    candle.Candle
+	in     store.LogEntry
+	out    store.Candle
 	dumped bool
 }{
-	{candle.LogEntry{
+	{store.LogEntry{
 		SourceIP:        "127.0.0.1", // access to first file
 		FileName:        "/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n6.radio-t.com",
 		AnswerTime:      time.Second,
 		Date:            time.Time{},
 	},
-		candle.Candle{}, // empty, not yet dumped
+		store.Candle{}, // empty, not yet dumped
 		false},
-	{candle.LogEntry{
+	{store.LogEntry{
 		SourceIP:        "127.0.0.1", // access to second file
 		FileName:        "/rtfiles/rt_podcast562.mp3",
 		DestinationNode: "n6.radio-t.com",
 		AnswerTime:      time.Second,
 		Date:            time.Time{},
 	},
-		candle.Candle{}, // empty, not yet dumped
+		store.Candle{}, // empty, not yet dumped
 		false},
-	{candle.LogEntry{
+	{store.LogEntry{
 		SourceIP:        "127.0.0.1", // access to first file, other node
 		FileName:        "/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n7.radio-t.com",
 		AnswerTime:      time.Second,
 		Date:            time.Time{},
 	},
-		candle.Candle{}, // empty, not yet dumped
+		store.Candle{}, // empty, not yet dumped
 		false},
-	{candle.LogEntry{
+	{store.LogEntry{
 		SourceIP:        "127.0.0.1", // access to first file, other minute
 		FileName:        "/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n7.radio-t.com",
 		AnswerTime:      time.Second,
 		Date:            time.Time{}.Add(time.Minute),
 	},
-		candle.Candle{ // from first 3 entries
-			Nodes: map[string]candle.Info{
+		store.Candle{ // from first 3 entries
+			Nodes: map[string]store.Info{
 				"n6.radio-t.com": {Volume: 2, MinAnswerTime: time.Second, MeanAnswerTime: time.Second, MaxAnswerTime: time.Second, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1, "/rtfiles/rt_podcast562.mp3": 1}},
 				"all":            {Volume: 2, MinAnswerTime: time.Second, MeanAnswerTime: time.Second, MaxAnswerTime: time.Second, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1, "/rtfiles/rt_podcast562.mp3": 1}},
 			},
 			StartMinute: time.Time{},
 		},
 		true},
-	{candle.LogEntry{
+	{store.LogEntry{
 		SourceIP:        "127.0.0.1", // access in third minute, will not be flushed into resultCandle
 		FileName:        "/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n7.radio-t.com",
 		AnswerTime:      time.Second,
 		Date:            time.Time{}.Add(time.Minute * 2),
 	},
-		candle.Candle{ // from 4th entry
-			Nodes: map[string]candle.Info{
+		store.Candle{ // from 4th entry
+			Nodes: map[string]store.Info{
 				"n7.radio-t.com": {Volume: 1, MinAnswerTime: time.Second, MeanAnswerTime: time.Second, MaxAnswerTime: time.Second, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
 				"all":            {Volume: 1, MinAnswerTime: time.Second, MeanAnswerTime: time.Second, MaxAnswerTime: time.Second, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
 			},
@@ -82,14 +82,14 @@ func Test(t *testing.T) {
 	const badDateFormat = `gabbish`
 
 	// normal flow
-	parser, err := New(defaultRegEx, defaultDateFormat)
+	parser, err := newParser(defaultRegEx, defaultDateFormat)
 	assert.Nil(t, err, "parser created")
 	assert.NotNil(t, parser.pattern, "parser pattern is present")
 
 	entry, err := parser.Do(testString)
 	assert.Nil(t, err, "string parsed")
 
-	entryParsed := candle.LogEntry{
+	entryParsed := store.LogEntry{
 		SourceIP:        "213.87.120.120",
 		FileName:        "/api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n6.radio-t.com",
@@ -103,18 +103,18 @@ func Test(t *testing.T) {
 	_, err = parser.Do(badString)
 	assert.NotNil(t, err, "string not parsed")
 
-	parser, err = New(defaultRegEx, badDateFormat)
+	parser, err = newParser(defaultRegEx, badDateFormat)
 	assert.Nil(t, err, "parser created")
 	_, err = parser.Do(testString)
 	assert.NotNil(t, err, "string not passed due to bad date")
-	_, err = New(badRegEx, defaultDateFormat)
+	_, err = newParser(badRegEx, defaultDateFormat)
 	assert.NotNil(t, err, "parser failed to be created due to bad regexp")
-	_, err = New(wrongRegEx, defaultDateFormat)
+	_, err = newParser(wrongRegEx, defaultDateFormat)
 	assert.NotNil(t, err, "parser failed to be created due to missing fields")
 
 	// test LogEntry conversion to Candle
 	for _, testPair := range testsTable {
-		resultCandle, ok := parser.Submit(testPair.in)
+		resultCandle, ok := parser.submit(testPair.in)
 		assert.EqualValues(t, testPair.out, resultCandle, "candle match with expected output")
 		assert.EqualValues(t, testPair.dumped, ok, "entry (not) dumped")
 	}

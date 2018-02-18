@@ -1,4 +1,4 @@
-package logstream
+package logservice
 
 import (
 	"io"
@@ -12,7 +12,7 @@ import (
 )
 
 // LogStreamer connects and activates container's log stream with io.Writer
-type LogStreamer struct {
+type logStreamer struct {
 	DockerClient  *docker.Client
 	ContainerName string
 	ContainerID   string
@@ -21,7 +21,7 @@ type LogStreamer struct {
 }
 
 // Go activates streamer
-func (l *LogStreamer) Go() {
+func (l *logStreamer) Go() {
 	log.Printf("[INFO] start log streamer for %s", l.ContainerName)
 	go func() {
 		logOpts := docker.LogsOptions{
@@ -40,23 +40,23 @@ func (l *LogStreamer) Go() {
 }
 
 // LineExtractor have buffer to store bytes before \n happen and channel to return complete line
-type LineExtractor struct {
+type lineExtractor struct {
 	ch  chan string
 	buf []byte
 }
 
 // NewLineExtractor create LineExtractor
-func NewLineExtractor() *LineExtractor {
-	return &LineExtractor{ch: make(chan string)}
+func newLineExtractor() *lineExtractor {
+	return &lineExtractor{ch: make(chan string)}
 }
 
 // Ch expose channel for readonly external access
-func (le *LineExtractor) Ch() <-chan string {
+func (le *lineExtractor) Ch() <-chan string {
 	return le.ch
 }
 
 // Write complete strings into channel
-func (le *LineExtractor) Write(p []byte) (n int, err error) {
+func (le *lineExtractor) Write(p []byte) (n int, err error) {
 	le.buf = append(le.buf, p...)
 
 	for bytes.Count(le.buf, []byte{'\n'}) > 0 {

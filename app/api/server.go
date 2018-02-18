@@ -12,7 +12,6 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
-	"github.com/umputun/rlb-stats/app/candle"
 	"github.com/umputun/rlb-stats/app/store"
 )
 
@@ -79,7 +78,7 @@ func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		render.Status(r, http.StatusOK)
-		render.JSON(w, r, candle.Aggregate(candles, duration))
+		render.JSON(w, r, store.AggregateCandles(candles, duration))
 		return
 	}
 	render.Status(r, http.StatusOK)

@@ -1,4 +1,4 @@
-package candle
+package store
 
 import (
 	"time"
@@ -20,7 +20,7 @@ type Info struct {
 }
 
 // NewInfo create empty node information
-func NewInfo() Info {
+func newInfo() Info {
 	return Info{
 		Volume:         0,
 		MinAnswerTime:  time.Hour,
@@ -64,7 +64,7 @@ func (c *Candle) Update(l LogEntry) {
 	for _, nodeName := range []string{l.DestinationNode, "all"} {
 		node, ok := c.Nodes[nodeName]
 		if !ok {
-			node = NewInfo()
+			node = newInfo()
 		}
 		node.update(l)
 		c.Nodes[nodeName] = node
@@ -72,8 +72,8 @@ func (c *Candle) Update(l LogEntry) {
 	c.StartMinute = l.Date
 }
 
-// Aggregate candles from input, aggInterval truncated to minutes
-func Aggregate(candles []Candle, aggInterval time.Duration) (result []Candle) {
+// AggregateCandles candles from input, aggInterval truncated to minutes
+func AggregateCandles(candles []Candle, aggInterval time.Duration) (result []Candle) {
 
 	aggInterval = aggInterval.Truncate(time.Minute)
 	var firstDate, lastDate = time.Now(), time.Time{}
@@ -91,7 +91,7 @@ func Aggregate(candles []Candle, aggInterval time.Duration) (result []Candle) {
 		minuteCandle.StartMinute = aggTime
 		for _, c := range candles {
 			if c.StartMinute == aggTime || c.StartMinute.After(aggTime) && c.StartMinute.Before(aggTime.Add(aggInterval)) {
-				c = updateAndDiscardTime(minuteCandle, c)
+				c = updateCandleAndDiscardTime(minuteCandle, c)
 			}
 		}
 		if len(minuteCandle.Nodes) != 0 {
@@ -101,11 +101,11 @@ func Aggregate(candles []Candle, aggInterval time.Duration) (result []Candle) {
 	return result
 }
 
-func updateAndDiscardTime(source Candle, appendix Candle) Candle {
+func updateCandleAndDiscardTime(source Candle, appendix Candle) Candle {
 	for n := range appendix.Nodes {
 		m, ok := source.Nodes[n]
 		if !ok {
-			m = NewInfo()
+			m = newInfo()
 		}
 		// to calculate mean time multiply source and appendix by their volume and divide everything by total volume
 		m.MeanAnswerTime = (m.MeanAnswerTime*time.Duration(m.Volume) + appendix.Nodes[n].MeanAnswerTime*time.Duration(appendix.Nodes[n].Volume)) /

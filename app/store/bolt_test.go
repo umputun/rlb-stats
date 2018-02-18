@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/umputun/rlb-stats/app/candle"
 )
 
 func TestSaveAndLoadLogEntryBolt(t *testing.T) {
@@ -14,7 +13,7 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	s, err := NewBolt("/tmp/test.bd")
 	assert.Nil(t, err, "engine created")
 
-	testCandle := candle.NewCandle()
+	testCandle := NewCandle()
 
 	assert.Nil(t, s.Save(testCandle), "saved fine")
 	savedCandle, err := s.Load(time.Time{}, time.Time{})

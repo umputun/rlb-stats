@@ -9,7 +9,6 @@ import (
 	"bytes"
 
 	"github.com/boltdb/bolt"
-	"github.com/umputun/rlb-stats/app/candle"
 )
 
 var bucket = []byte("stats")
@@ -39,7 +38,7 @@ func NewBolt(dbFile string) (*Bolt, error) {
 }
 
 // Save Candles with starting minute time.Unix() as a key for bolt range query
-func (s *Bolt) Save(candle candle.Candle) (err error) {
+func (s *Bolt) Save(candle Candle) (err error) {
 	key := fmt.Sprintf("%d", candle.StartMinute.Unix())
 	total := 0
 	err = s.db.Update(func(tx *bolt.Tx) error {
@@ -59,8 +58,8 @@ func (s *Bolt) Save(candle candle.Candle) (err error) {
 }
 
 // Load Candles by period
-func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []candle.Candle, err error) {
-	result = make([]candle.Candle, 0)
+func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err error) {
+	result = make([]Candle, 0)
 	err = s.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucket)
 		c := b.Cursor()
@@ -69,7 +68,7 @@ func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []candle.Candle, e
 		max := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
 
 		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
-			newCandle := candle.Candle{}
+			newCandle := Candle{}
 			err = json.Unmarshal(v, &newCandle)
 			if err != nil {
 				return err

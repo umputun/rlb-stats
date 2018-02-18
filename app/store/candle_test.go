@@ -1,4 +1,4 @@
-package candle
+package store
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testsTable = []struct {
+var logsTestsTable = []struct {
 	in  LogEntry
 	out Candle
 }{
@@ -63,7 +63,7 @@ var testsTable = []struct {
 func TestNewAndUpdateCandle(t *testing.T) {
 
 	candle := NewCandle()
-	for _, testPair := range testsTable {
+	for _, testPair := range logsTestsTable {
 		candle.Update(testPair.in)
 		assert.EqualValues(t, testPair.out, candle, "candle match with expected output")
 	}
@@ -187,7 +187,7 @@ var resultCandles = map[int][]Candle{
 func TestAggregation(t *testing.T) {
 
 	for _, i := range []int{1, 2, 3, 5, 10} {
-		testSlice := Aggregate(testCandles, time.Duration(i)*time.Minute)
+		testSlice := AggregateCandles(testCandles, time.Duration(i)*time.Minute)
 		assert.EqualValues(t, resultCandles[i], testSlice, "candle aggregate for %v minutes match with expected output", i)
 	}
 }
