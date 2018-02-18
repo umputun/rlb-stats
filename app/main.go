@@ -7,9 +7,7 @@ import (
 
 	"github.com/jessevdk/go-flags"
 
-	"github.com/fsouza/go-dockerclient"
-	"github.com/umputun/rlb-stats/app/logstream"
-	"github.com/umputun/rlb-stats/app/parse"
+	"github.com/umputun/rlb-stats/app/logservice"
 	"github.com/umputun/rlb-stats/app/rest"
 	"github.com/umputun/rlb-stats/app/store"
 )
@@ -38,12 +36,16 @@ func main() {
 	}
 	log.Printf("rlb-stats %s", revision)
 	storage := getEngine(opts.BoltDB)
-	if opts.ContainerName != "" { // start container log streamer and parse logic only if there is container
-		parser := getParser(opts.RegEx, opts.DateFormat)
-		dockerClient := getDocker(opts.DockerHost)
-		logExtractor := logstream.NewLineExtractor()
-		logStreamer := getLogStreamer(dockerClient, opts.ContainerName, opts.LogTail, logExtractor)
-		startLogStreamer(logStreamer, parser, logExtractor, storage)
+	if opts.ContainerName != "" { // start log streamer and parse logic only if there is container
+		logServ := logservice.LogService{
+			DockerHost:    opts.DockerHost,
+			ContainerName: opts.ContainerName,
+			Engine:        storage,
+			RegEx:         opts.RegEx,
+			DateFormat:    opts.DateFormat,
+			LogTail:       opts.LogTail,
+		}
+		logServ.Go()
 	}
 	serv := rest.Server{
 		Engine: storage,
@@ -58,57 +60,4 @@ func getEngine(boltFile string) store.Engine {
 		log.Fatalf("[ERROR] can't open db, %v", err)
 	}
 	return storage
-}
-
-func getParser(regEx string, dateFormat string) *parse.Parser {
-	parser, err := parse.New(regEx, dateFormat)
-	if err != nil {
-		log.Fatalf("[ERROR] can't validate regex, %v", err)
-	}
-	return parser
-}
-
-func getDocker(endpoint string) *docker.Client {
-	dockerClient, err := docker.NewClient(endpoint)
-	if err != nil {
-		log.Fatalf("[ERROR] can't initialise docker client, %v", err)
-	}
-	return dockerClient
-}
-
-func getLogStreamer(d *docker.Client, containerName string, tailOption string, le *logstream.LineExtractor) logstream.LogStreamer {
-	imageInfo, err := d.InspectContainer(containerName)
-	if err != nil {
-		log.Fatalf("[ERROR] can't get container id for %s, %v", containerName, err)
-	}
-	if imageInfo.State.Status != "running" {
-		log.Fatalf("[ERROR] container %s is not running, status %s", containerName, imageInfo.State.Status)
-	}
-
-	logStreamer := logstream.LogStreamer{
-		DockerClient:  d,
-		ContainerName: containerName,
-		ContainerID:   imageInfo.ID,
-		LogWriter:     le,
-		Tail:          tailOption,
-	}
-	return logStreamer
-}
-
-func startLogStreamer(ls logstream.LogStreamer, p *parse.Parser, le *logstream.LineExtractor, storage store.Engine) {
-
-	ls.Go()     // start listening to container logs
-	go func() { // start parser on logs
-		for line := range le.Ch() {
-			entry, err := p.Do(line)
-			if err == nil {
-				if candle, ok := p.Submit(entry); ok { // Submit returns ok in case candle is ready
-					err = storage.Save(candle)
-					if err != nil {
-						log.Printf("[ERROR] couldn't write candle to storage, %v", err)
-					}
-				}
-			}
-		}
-	}()
 }
