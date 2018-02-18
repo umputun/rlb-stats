@@ -48,8 +48,9 @@ func main() {
 		logServ.Go()
 	}
 	serv := api.Server{
-		Engine: storage,
-		Port:   opts.Port,
+		Engine:  storage,
+		Port:    opts.Port,
+		Version: revision,
 	}
 	serv.Run()
 }

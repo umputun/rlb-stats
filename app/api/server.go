@@ -9,6 +9,8 @@ import (
 
 	"time"
 
+	"github.com/didip/tollbooth"
+	"github.com/didip/tollbooth_chi"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
@@ -20,8 +22,9 @@ type JSON map[string]interface{}
 
 // Server is a rest interface to storage
 type Server struct {
-	Engine store.Engine
-	Port   int
+	Engine  store.Engine
+	Port    int
+	Version string
 }
 
 func sendErrorJSON(w http.ResponseWriter, r *http.Request, code int, err error, details string) {
@@ -35,8 +38,11 @@ func (s *Server) Run() {
 	log.Printf("[INFO] activate rest server on port %v", s.Port)
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(middleware.Logger, middleware.Recoverer)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(tollbooth_chi.LimitHandler(tollbooth.NewLimiter(10, nil)))
+	r.Use(appInfo("rlb-stats", s.Version), Ping)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/candle", s.getCandle)
