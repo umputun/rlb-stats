@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/umputun/rlb-stats/app/store"
+	"github.com/umputun/rlb-stats/app/web"
 )
 
 // JSON is a map alias, just for convenience
@@ -47,6 +48,7 @@ func (s *Server) Run() {
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/candle", s.getCandle)
 	})
+	r.Mount("/dashboard", web.UIRouter())
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", s.Port), r))
 }
