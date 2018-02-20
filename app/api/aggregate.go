@@ -9,7 +9,12 @@ import (
 // aggregateCandles takes candles from input, and aggregate them by aggInterval truncated to minutes
 func aggregateCandles(candles []store.Candle, aggInterval time.Duration) (result []store.Candle) {
 
+	// protect against less than 1m interval truncated to zero
+	if aggInterval < time.Minute {
+		aggInterval = time.Minute
+	}
 	aggInterval = aggInterval.Truncate(time.Minute)
+
 	var firstDate, lastDate = time.Now(), time.Time{}
 	for _, c := range candles {
 		if c.StartMinute.Before(firstDate) {
