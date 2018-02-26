@@ -10,11 +10,13 @@ import (
 	"github.com/umputun/rlb-stats/app/api"
 	"github.com/umputun/rlb-stats/app/logservice"
 	"github.com/umputun/rlb-stats/app/store"
+	"github.com/umputun/rlb-stats/app/web"
 )
 
 var opts struct {
 	BoltDB        string `long:"bolt" env:"BOLT_FILE" default:"/tmp/rlb-stats.bd" description:"boltdb file"`
 	Port          int    `long:"port" env:"PORT" default:"8080" description:"REST server port"`
+	UIPort        int    `long:"ui_port" env:"UI_PORT" default:"8000" description:"UI server port"`
 	ContainerName string `long:"container_name" env:"CONTAINER_NAME" default:"" description:"container name"`
 	DockerHost    string `long:"docker" env:"DOCKER_HOST" default:"unix:///var/run/docker.sock" description:"docker host"`
 	LogTail       string `long:"log_tail" env:"LOG_TAIL" default:"0" description:"How many log entries to load from container, set to 'all' on the first run"`
@@ -47,12 +49,17 @@ func main() {
 		}
 		logServ.Go()
 	}
-	serv := api.Server{
+	restServ := api.Server{
 		Engine:  storage,
 		Port:    opts.Port,
 		Version: revision,
 	}
-	serv.Run()
+	uiServer := web.Server{
+		Port:     opts.UIPort,
+		RESTPort: opts.Port,
+	}
+	go restServ.Run()
+	uiServer.Run()
 }
 
 func getEngine(boltFile string) store.Engine {

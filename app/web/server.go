@@ -11,24 +11,37 @@ import (
 
 	"net/url"
 
+	"github.com/didip/tollbooth"
+	"github.com/didip/tollbooth_chi"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/umputun/rlb-stats/app/store"
 )
 
-// UIRouter handle routes for dashboard
-func UIRouter() http.Handler {
+// Server is a UI for rlb-stats rest backend
+type Server struct {
+	Port     int
+	RESTPort int
+}
+
+// Run starts a web-server
+func (s *Server) Run() {
+	log.Printf("[INFO] activate UI web server on port %v", s.Port)
 	r := chi.NewRouter()
+
 	r.Use(middleware.Logger, middleware.Recoverer)
 	r.Use(middleware.RealIP)
+	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(tollbooth_chi.LimitHandler(tollbooth.NewLimiter(10, nil)))
 
 	r.Get("/", getDashboard)
 	r.Get("/file_stats", getFileStats)
-	return r
+
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", s.Port), r))
 }
 
-// GET /dashboard
+// GET /
 func getDashboard(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	if from == "" {

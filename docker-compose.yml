@@ -18,10 +18,11 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock
 
         ports:
+            - "8000:8000"
             - "8080:8080"
 
-#        environment:
-#            - REGEXP=^(?P<SourceIP>.+) - - \[(?P<Date>.+)\] "GET (?P<FileName>.+) (?:.+)" 200 (?P<AnswerTime>.+) "(?P<DestinationNode>.+?)" "(?:.+)" "-"$$
-#            - DATE_FORMAT=02/Jan/2006:15:04:05 -0700
-#            - CONTAINER_NAME=nginx
-
+        environment:
+#       - REGEXP=^(?P<SourceIP>.+) - - \[(?P<Date>.+)\] "GET /(?P<FileName>.*) (?:.+)" 200 (?P<AnswerTime>.+) "(?P<DestinationNode>.+?)" "(?:.+)" "-"$$
+#       - DATE_FORMAT=02/Jan/2006:15:04:05 -0700
+#       - CONTAINER_NAME=nginx
+#       - LOG_TAIL=all
