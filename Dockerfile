@@ -21,6 +21,7 @@ FROM umputun/baseimage:micro-latest
 RUN apk add --update ca-certificates && update-ca-certificates
 
 COPY --from=build /go/src/github.com/umputun/rlb-stats/rlb-stats /srv/
+ADD webapp /srv/webapp
 
 RUN chown -R umputun:umputun /srv
 

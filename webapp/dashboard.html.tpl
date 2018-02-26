@@ -33,7 +33,7 @@
                 <tbody>
                 {{ range .TopFiles }}
                 <tr>
-                    <th scope="row"><a href="/file_stats?name={{.Name}}">{{.Name}}</a></th>
+                    <th scope="row"><a href="dashboard/file_stats?name={{.Name}}">{{.Name}}</a></th>
                     <td>{{.Volume}}</td>
                 </tr>
                 {{ end }}

@@ -17,8 +17,6 @@ import (
 	"github.com/umputun/rlb-stats/app/store"
 )
 
-var templates = template.Must(template.ParseGlob("*.tpl"))
-
 // UIRouter handle routes for dashboard
 func UIRouter() http.Handler {
 	r := chi.NewRouter()
@@ -26,7 +24,7 @@ func UIRouter() http.Handler {
 	r.Use(middleware.RealIP)
 
 	r.Get("/", getDashboard)
-	r.Get("/file", getFileStats)
+	r.Get("/file_stats", getFileStats)
 	return r
 }
 
@@ -68,7 +66,8 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 		getTop("files", candles, 10),
 		getTop("nodes", candles, 10)}
 
-	err = templates.ExecuteTemplate(w, "dashboard.html.tpl", result)
+	t := template.Must(template.ParseFiles("webapp/dashboard.html.tpl"))
+	err = t.Execute(w, result)
 	if err != nil {
 		// TODO handle template execution problem
 		log.Printf("[WARN] dashboard: unable to execute template: %v", err)
@@ -108,7 +107,8 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = templates.ExecuteTemplate(w, "file_stats.html.tpl", candles)
+	t := template.Must(template.ParseFiles("webapp/file_stats.html.tpl"))
+	err = t.Execute(w, candles)
 	if err != nil {
 		// TODO handle template execution problem
 		log.Printf("[WARN] dashboard: unable to execute template: %v", err)
