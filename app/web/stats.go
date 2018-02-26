@@ -6,10 +6,10 @@ import (
 	"github.com/umputun/rlb-stats/app/store"
 )
 
-// fileInfo contain single node download statistics
+// volumeStats contain single node download statistics
 type volumeStats struct {
-	name   string
-	volume int
+	Name   string
+	Volume int
 }
 
 func getTop(aggType string, candles []store.Candle, amount int) []volumeStats {
@@ -38,8 +38,17 @@ func getTop(aggType string, candles []store.Candle, amount int) []volumeStats {
 	}
 
 	sort.Slice(result, func(i, j int) bool {
-		return result[i].volume > result[j].volume
+		// sort by value, by Name within value (desc)
+		if result[i].Volume > result[j].Volume ||
+			result[i].Volume == result[j].Volume && result[i].Name > result[j].Name {
+			return true
+		}
+		return false
 	})
+
+	if len(result) < amount {
+		return result
+	}
 
 	return result[:amount]
 }

@@ -4,7 +4,7 @@ FROM umputun/baseimage:buildgo-latest as build
 ADD . /go/src/github.com/umputun/rlb-stats
 WORKDIR /go/src/github.com/umputun/rlb-stats
 
-RUN cd app && go test -v $(go list -e ./... | grep -v vendor)
+RUN go test -v $(go list -e ./... | grep -v vendor)
 
 RUN gometalinter --disable-all --deadline=300s --vendor --enable=vet --enable=vetshadow --enable=golint \
     --enable=staticcheck --enable=ineffassign --enable=goconst --enable=errcheck --enable=unconvert \
