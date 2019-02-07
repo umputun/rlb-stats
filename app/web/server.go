@@ -75,9 +75,15 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 	result := struct {
 		TopFiles []volumeStats
 		TopNodes []volumeStats
+		Charts   []string
 	}{
 		getTop("files", candles, 10),
-		getTop("nodes", candles, 10)}
+		getTop("nodes", candles, 10),
+		[]string{
+			"https://raw.githubusercontent.com/zieckey/gochart/master/image/spline.png",
+			"https://raw.githubusercontent.com/zieckey/gochart/master/image/spline.png",
+		},
+	}
 
 	t := template.Must(template.ParseFiles("webapp/dashboard.html.tpl"))
 	err = t.Execute(w, result)
@@ -91,6 +97,11 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 
 // GET /file_stats
 func getFileStats(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		log.Printf("no 'name' field passed")
+		return
+	}
 	from := r.URL.Query().Get("from")
 	if from == "" {
 		from = "168h"
@@ -120,8 +131,18 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	result := struct {
+		Name    string
+		Charts  []string
+		Candles []store.Candle
+	}{
+		name,
+		[]string{"https://raw.githubusercontent.com/zieckey/gochart/master/image/spline.png"},
+		candles,
+	}
+
 	t := template.Must(template.ParseFiles("webapp/file_stats.html.tpl"))
-	err = t.Execute(w, candles)
+	err = t.Execute(w, result)
 	if err != nil {
 		// TODO handle template execution problem
 		log.Printf("[WARN] dashboard: unable to execute template: %v", err)

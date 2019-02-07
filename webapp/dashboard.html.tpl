@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta http-equiv="refresh" content="300"> <!-- Refresh every 5 minutes -->
     <title>rlb-stats</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
 </head>
 <body>
 <table class="table">
@@ -18,8 +18,9 @@
     </thead>
     <tbody>
     <tr>
-        <td><img src="https://raw.githubusercontent.com/zieckey/gochart/master/image/spline.png" class="img-fluid"></td>
-        <td><img src="https://raw.githubusercontent.com/zieckey/gochart/master/image/spline.png" class="img-fluid"></td>
+        {{ range $_, $url := .Charts }}
+        <td><img src="{{$url}}" class="img-fluid"></td>
+        {{ end }}
     </tr>
     <tr>
         <td>

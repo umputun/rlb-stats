@@ -21,8 +21,10 @@ services:
             - "8000:8000"
             - "8080:8080"
 
+        # these regexp and and container_name allow to watch for it's own logs and show information from them
+        # which is useful for test purposes
         environment:
-#       - REGEXP=^(?P<SourceIP>.+) - - \[(?P<Date>.+)\] "GET /(?P<FileName>.*) (?:.+)" 200 (?P<AnswerTime>.+) "(?P<DestinationNode>.+?)" "(?:.+)" "-"$$
-#       - DATE_FORMAT=02/Jan/2006:15:04:05 -0700
-#       - CONTAINER_NAME=nginx
-#       - LOG_TAIL=all
+#        - REGEXP=^(?P<Date>.+) "GET https?://(?P<DestinationNode>.+?)(?P<FileName>/.+)(?:\?.*) HTTP/1.1" from (?P<SourceIP>.+):\d+ - (?:.+) in (?P<AnswerTime>.+)$$
+#        - CONTAINER_NAME=rlb-stats
+#        - DATE_FORMAT=02/Jan/2006:15:04:05 -0700
+#        - LOG_TAIL=all
