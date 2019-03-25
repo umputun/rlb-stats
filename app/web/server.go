@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/wcharczuk/go-chart"
+
 	"fmt"
 
 	"net/url"
@@ -37,6 +39,7 @@ func (s *Server) Run() {
 
 	r.Get("/", getDashboard)
 	r.Get("/file_stats", getFileStats)
+	r.Get("/chart", drawChart)
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", s.Port), r))
 }
@@ -80,8 +83,8 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 		getTop("files", candles, 10),
 		getTop("nodes", candles, 10),
 		[]string{
-			"https://raw.githubusercontent.com/zieckey/gochart/master/image/spline.png",
-			"https://raw.githubusercontent.com/zieckey/gochart/master/image/spline.png",
+			"/chart",
+			"/chart",
 		},
 	}
 
@@ -137,7 +140,7 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 		Candles []store.Candle
 	}{
 		name,
-		[]string{"https://raw.githubusercontent.com/zieckey/gochart/master/image/spline.png"},
+		[]string{"/chart"},
 		candles,
 	}
 
@@ -149,6 +152,70 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	render.Status(r, http.StatusOK)
+}
+
+func drawChart(w http.ResponseWriter, r *http.Request) {
+	graph := chart.Chart{
+		XAxis: chart.XAxis{
+			Style: chart.StyleShow(),
+		},
+		YAxis: chart.YAxis{
+			Style: chart.StyleShow(),
+		},
+		Background: chart.Style{
+			Padding: chart.Box{
+				Top:  20,
+				Left: 20,
+			},
+		},
+		Series: []chart.Series{
+			chart.TimeSeries{
+				Name: "A test series",
+				XValues: []time.Time{
+					time.Now().AddDate(0, 0, -10),
+					time.Now().AddDate(0, 0, -9),
+					time.Now().AddDate(0, 0, -8),
+					time.Now().AddDate(0, 0, -7),
+					time.Now().AddDate(0, 0, -6),
+					time.Now().AddDate(0, 0, -5),
+					time.Now().AddDate(0, 0, -4),
+					time.Now().AddDate(0, 0, -3),
+					time.Now().AddDate(0, 0, -2),
+					time.Now().AddDate(0, 0, -1),
+					time.Now(),
+				},
+				YValues: []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0},
+			},
+			chart.TimeSeries{
+				Name: "A test series",
+				XValues: []time.Time{
+					time.Now().AddDate(0, 0, -10),
+					time.Now().AddDate(0, 0, -9),
+					time.Now().AddDate(0, 0, -8),
+					time.Now().AddDate(0, 0, -7),
+					time.Now().AddDate(0, 0, -6),
+					time.Now().AddDate(0, 0, -5),
+					time.Now().AddDate(0, 0, -4),
+					time.Now().AddDate(0, 0, -3),
+					time.Now().AddDate(0, 0, -2),
+					time.Now().AddDate(0, 0, -1),
+					time.Now(),
+				},
+				YValues: []float64{11.0, 10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0},
+			},
+		},
+	}
+
+	graph.Elements = []chart.Renderable{
+		chart.Legend(&graph),
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+	err := graph.Render(chart.PNG, w)
+	if err != nil {
+		// TODO handle graph generation problem
+		log.Printf("[WARN] dashboard: unable to render graph: %v", err)
+	}
 }
 
 func loadCandles(from time.Time, to time.Time, duration time.Duration) ([]store.Candle, error) {
