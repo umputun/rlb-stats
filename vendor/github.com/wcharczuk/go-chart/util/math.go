@@ -2,6 +2,7 @@ package util
 
 import (
 	"math"
+	"time"
 )
 
 const (
@@ -57,6 +58,27 @@ func (m mathUtil) MinAndMax(values ...float64) (min float64, max float64) {
 	return
 }
 
+// MinAndMaxOfTime returns the min and max of a given set of times
+// in one pass.
+func (m mathUtil) MinAndMaxOfTime(values ...time.Time) (min time.Time, max time.Time) {
+	if len(values) == 0 {
+		return
+	}
+
+	min = values[0]
+	max = values[0]
+
+	for _, v := range values[1:] {
+		if max.Before(v) {
+			max = v
+		}
+		if min.After(v) {
+			min = v
+		}
+	}
+	return
+}
+
 // GetRoundToForDelta returns a `roundTo` value for a given delta.
 func (m mathUtil) GetRoundToForDelta(delta float64) float64 {
 	startingDeltaBound := math.Pow(10.0, 10.0)
@@ -71,18 +93,12 @@ func (m mathUtil) GetRoundToForDelta(delta float64) float64 {
 
 // RoundUp rounds up to a given roundTo value.
 func (m mathUtil) RoundUp(value, roundTo float64) float64 {
-	if roundTo < 0.000000000000001 {
-		return value
-	}
 	d1 := math.Ceil(value / roundTo)
 	return d1 * roundTo
 }
 
 // RoundDown rounds down to a given roundTo value.
 func (m mathUtil) RoundDown(value, roundTo float64) float64 {
-	if roundTo < 0.000000000000001 {
-		return value
-	}
 	d1 := math.Floor(value / roundTo)
 	return d1 * roundTo
 }

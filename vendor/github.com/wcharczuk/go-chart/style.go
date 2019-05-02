@@ -39,8 +39,6 @@ type Style struct {
 	Show    bool
 	Padding Box
 
-	ClassName string
-
 	StrokeWidth     float64
 	StrokeColor     drawing.Color
 	StrokeDashArray []float64
@@ -73,8 +71,7 @@ func (s Style) IsZero() bool {
 		s.FillColor.IsZero() &&
 		s.FontColor.IsZero() &&
 		s.FontSize == 0 &&
-		s.Font == nil &&
-		s.ClassName == ""
+		s.Font == nil
 }
 
 // String returns a text representation of the style.
@@ -88,12 +85,6 @@ func (s Style) String() string {
 		output = []string{"\"show\": true"}
 	} else {
 		output = []string{"\"show\": false"}
-	}
-
-	if s.ClassName != "" {
-		output = append(output, fmt.Sprintf("\"class_name\": %s", s.ClassName))
-	} else {
-		output = append(output, "\"class_name\": null")
 	}
 
 	if !s.Padding.IsZero() {
@@ -162,16 +153,6 @@ func (s Style) String() string {
 	}
 
 	return "{" + strings.Join(output, ", ") + "}"
-}
-
-func (s Style) GetClassName(defaults ...string) string {
-	if s.ClassName == "" {
-		if len(defaults) > 0 {
-			return defaults[0]
-		}
-		return ""
-	}
-	return s.ClassName
 }
 
 // GetStrokeColor returns the stroke color.
@@ -340,7 +321,6 @@ func (s Style) GetTextRotationDegrees(defaults ...float64) float64 {
 
 // WriteToRenderer passes the style's options to a renderer.
 func (s Style) WriteToRenderer(r Renderer) {
-	r.SetClassName(s.GetClassName())
 	r.SetStrokeColor(s.GetStrokeColor())
 	r.SetStrokeWidth(s.GetStrokeWidth())
 	r.SetStrokeDashArray(s.GetStrokeDashArray())
@@ -357,7 +337,6 @@ func (s Style) WriteToRenderer(r Renderer) {
 
 // WriteDrawingOptionsToRenderer passes just the drawing style options to a renderer.
 func (s Style) WriteDrawingOptionsToRenderer(r Renderer) {
-	r.SetClassName(s.GetClassName())
 	r.SetStrokeColor(s.GetStrokeColor())
 	r.SetStrokeWidth(s.GetStrokeWidth())
 	r.SetStrokeDashArray(s.GetStrokeDashArray())
@@ -366,7 +345,6 @@ func (s Style) WriteDrawingOptionsToRenderer(r Renderer) {
 
 // WriteTextOptionsToRenderer passes just the text style options to a renderer.
 func (s Style) WriteTextOptionsToRenderer(r Renderer) {
-	r.SetClassName(s.GetClassName())
 	r.SetFont(s.GetFont())
 	r.SetFontColor(s.GetFontColor())
 	r.SetFontSize(s.GetFontSize())
@@ -374,8 +352,6 @@ func (s Style) WriteTextOptionsToRenderer(r Renderer) {
 
 // InheritFrom coalesces two styles into a new style.
 func (s Style) InheritFrom(defaults Style) (final Style) {
-	final.ClassName = s.GetClassName(defaults.ClassName)
-
 	final.StrokeColor = s.GetStrokeColor(defaults.StrokeColor)
 	final.StrokeWidth = s.GetStrokeWidth(defaults.StrokeWidth)
 	final.StrokeDashArray = s.GetStrokeDashArray(defaults.StrokeDashArray)
@@ -403,7 +379,6 @@ func (s Style) InheritFrom(defaults Style) (final Style) {
 // GetStrokeOptions returns the stroke components.
 func (s Style) GetStrokeOptions() Style {
 	return Style{
-		ClassName:       s.ClassName,
 		StrokeDashArray: s.StrokeDashArray,
 		StrokeColor:     s.StrokeColor,
 		StrokeWidth:     s.StrokeWidth,
@@ -413,7 +388,6 @@ func (s Style) GetStrokeOptions() Style {
 // GetFillOptions returns the fill components.
 func (s Style) GetFillOptions() Style {
 	return Style{
-		ClassName: s.ClassName,
 		FillColor: s.FillColor,
 	}
 }
@@ -421,7 +395,6 @@ func (s Style) GetFillOptions() Style {
 // GetDotOptions returns the dot components.
 func (s Style) GetDotOptions() Style {
 	return Style{
-		ClassName:       s.ClassName,
 		StrokeDashArray: nil,
 		FillColor:       s.DotColor,
 		StrokeColor:     s.DotColor,
@@ -432,7 +405,6 @@ func (s Style) GetDotOptions() Style {
 // GetFillAndStrokeOptions returns the fill and stroke components.
 func (s Style) GetFillAndStrokeOptions() Style {
 	return Style{
-		ClassName:       s.ClassName,
 		StrokeDashArray: s.StrokeDashArray,
 		FillColor:       s.FillColor,
 		StrokeColor:     s.StrokeColor,
@@ -443,7 +415,6 @@ func (s Style) GetFillAndStrokeOptions() Style {
 // GetTextOptions returns just the text components of the style.
 func (s Style) GetTextOptions() Style {
 	return Style{
-		ClassName:           s.ClassName,
 		FontColor:           s.FontColor,
 		FontSize:            s.FontSize,
 		Font:                s.Font,

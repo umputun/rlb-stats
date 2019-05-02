@@ -11,13 +11,6 @@ const (
 	DefaultSimpleMovingAveragePeriod = 16
 )
 
-// Interface Assertions.
-var (
-	_ Series              = (*SMASeries)(nil)
-	_ FirstValuesProvider = (*SMASeries)(nil)
-	_ LastValuesProvider  = (*SMASeries)(nil)
-)
-
 // SMASeries is a computed series.
 type SMASeries struct {
 	Name  string
@@ -67,17 +60,6 @@ func (sma SMASeries) GetValues(index int) (x, y float64) {
 	px, _ := sma.InnerSeries.GetValues(index)
 	x = px
 	y = sma.getAverage(index)
-	return
-}
-
-// GetFirstValues computes the first moving average value.
-func (sma SMASeries) GetFirstValues() (x, y float64) {
-	if sma.InnerSeries == nil || sma.InnerSeries.Len() == 0 {
-		return
-	}
-	px, _ := sma.InnerSeries.GetValues(0)
-	x = px
-	y = sma.getAverage(0)
 	return
 }
 

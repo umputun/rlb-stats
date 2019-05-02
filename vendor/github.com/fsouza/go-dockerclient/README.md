@@ -1,7 +1,7 @@
 # go-dockerclient
 
-[![Travis Build Status](https://travis-ci.org/fsouza/go-dockerclient.svg?branch=master)](https://travis-ci.org/fsouza/go-dockerclient)
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/4m374pti06ubg2l7?svg=true)](https://ci.appveyor.com/project/fsouza/go-dockerclient)
+[![Travis Build Status](https://travis-ci.com/fsouza/go-dockerclient.svg?branch=master)](https://travis-ci.com/fsouza/go-dockerclient)
+[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/4yusq1f9dqbicobt?svg=true)](https://ci.appveyor.com/project/fsouza/go-dockerclient)
 [![GoDoc](https://img.shields.io/badge/api-Godoc-blue.svg?style=flat-square)](https://godoc.org/github.com/fsouza/go-dockerclient)
 
 This package presents a client for the Docker remote API. It also provides
@@ -34,7 +34,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 )
 
 func main() {
@@ -70,7 +70,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 )
 
 func main() {
@@ -95,7 +95,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 )
 
 func main() {
@@ -113,11 +113,11 @@ All development commands can be seen in the [Makefile](Makefile).
 Commited code must pass:
 
 * [staticcheck](https://staticcheck.io/)
-* [gofmt](https://golang.org/cmd/gofmt)
+* [gofumpt](https://github.com/mvdan/gofumpt)
 * [go test](https://golang.org/cmd/go/#hdr-Test_packages)
 
-Running `make test` will check all of these. If your editor does not
-automatically call ``gofmt -s``, make sure you invoke it manually.
+Running ``make test`` will check all of these. You can reformat the code with
+``make fmt``.
 
 ## Vendoring / Modules
 

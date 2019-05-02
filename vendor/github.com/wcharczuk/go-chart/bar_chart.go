@@ -31,9 +31,6 @@ type BarChart struct {
 
 	BarSpacing int
 
-	UseBaseValue bool
-	BaseValue    float64
-
 	Font        *truetype.Font
 	defaultFont *truetype.Font
 
@@ -202,20 +199,11 @@ func (bc BarChart) drawBars(r Renderer, canvasBox Box, yr Range) {
 
 		by = canvasBox.Bottom - yr.Translate(bar.Value)
 
-		if bc.UseBaseValue {
-			barBox = Box{
-				Top:    by,
-				Left:   bxl,
-				Right:  bxr,
-				Bottom: canvasBox.Bottom - yr.Translate(bc.BaseValue),
-			}
-		} else {
-			barBox = Box{
-				Top:    by,
-				Left:   bxl,
-				Right:  bxr,
-				Bottom: canvasBox.Bottom,
-			}
+		barBox = Box{
+			Top:    by,
+			Left:   bxl,
+			Right:  bxr,
+			Bottom: canvasBox.Bottom,
 		}
 
 		Draw.Box(r, barBox, bar.Style.InheritFrom(bc.styleDefaultsBar(index)))
