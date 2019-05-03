@@ -27,6 +27,8 @@ func getTop(aggType string, candles []store.Candle, amount int) []volumeStats {
 				for node, count := range candle.Nodes {
 					agg[node] += count.Volume
 				}
+				// remove aggregated result from top
+				delete(agg, "all")
 			}
 		}
 	}
