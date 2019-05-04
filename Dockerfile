@@ -1,16 +1,16 @@
 # Build
 FROM umputun/baseimage:buildgo as build
 
-ADD . /go/src/github.com/umputun/rlb-stats
-WORKDIR /go/src/github.com/umputun/rlb-stats
+ADD . /app
+WORKDIR /app
+ENV GOFLAGS="-mod=vendor" GO111MODULE=on
 
-RUN go test -v $(go list -e ./... | grep -v vendor)
+RUN go test -v ./...
 
-RUN gometalinter --disable-all --deadline=300s --vendor --enable=vet --enable=vetshadow --enable=golint \
+RUN golangci-lint run --disable-all --deadline=300s --enable=vet --enable=vetshadow --enable=golint \
     --enable=staticcheck --enable=ineffassign --enable=goconst --enable=errcheck --enable=unconvert \
-    --enable=deadcode --enable=gosimple -tests ./...
+    --enable=deadcode --enable=gosimple ./...
 
-RUN /script/checkvendor.sh
 RUN mkdir -p target && /script/coverage.sh
 
 RUN go build -o rlb-stats -ldflags "-X main.revision=$(git rev-parse --abbrev-ref HEAD)-$(git describe --abbrev=7 --always --tags)-$(date +%Y%m%d-%H:%M:%S)" ./app
@@ -20,7 +20,7 @@ FROM umputun/baseimage:app
 
 RUN apk add --update ca-certificates && update-ca-certificates
 
-COPY --from=build /go/src/github.com/umputun/rlb-stats/rlb-stats /srv/
+COPY --from=build /app/rlb-stats /srv/
 ADD webapp /srv/webapp
 
 RUN chown -R app:app /srv
