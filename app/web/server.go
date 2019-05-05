@@ -46,29 +46,11 @@ func (s *Server) Run() {
 
 // GET /
 func getDashboard(w http.ResponseWriter, r *http.Request) {
-	from := r.URL.Query().Get("from")
-	if from == "" {
-		from = "168h"
-	}
-	fromDuration, err := time.ParseDuration(from)
-	if err != nil {
-		// TODO write a warning about being unable to parse from field
-		// TODO handle negative duration
-		log.Print("[WARN] dashboard: can't parse from field")
-		fromDuration = time.Hour * 24 * 7
-	}
-	fromTime := time.Now().Add(-fromDuration)
-	toTime := time.Now()
-	if to := r.URL.Query().Get("to"); to != "" {
-		t, terr := time.ParseDuration(to)
-		if terr != nil {
-			log.Print("[WARN] dashboard: can't parse to field")
-			//	TODO write a warning about being unable to parse to field
-			//	TODO handle negative duration
-		}
-		toTime = toTime.Add(-t)
-	}
-	candles, err := loadCandles(fromTime, toTime, time.Minute)
+	fromTime, toTime, aggDuration := calculateTimePeriod(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+	)
+	candles, err := loadCandles(fromTime, toTime, aggDuration)
 	if err != nil {
 		// TODO handle being unable to get candles
 		log.Printf("[WARN] dashboard: unable to load candles: %v", err)
@@ -105,29 +87,11 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 		log.Printf("no 'name' field passed")
 		return
 	}
-	from := r.URL.Query().Get("from")
-	if from == "" {
-		from = "168h"
-	}
-	fromDuration, err := time.ParseDuration(from)
-	if err != nil {
-		// TODO write a warning about being unable to parse from field
-		// TODO handle negative duration
-		log.Print("[WARN] dashboard: can't parse from field")
-		fromDuration = time.Hour * 24 * 7
-	}
-	fromTime := time.Now().Add(-fromDuration)
-	toTime := time.Now()
-	if to := r.URL.Query().Get("to"); to != "" {
-		t, terr := time.ParseDuration(to)
-		if terr != nil {
-			log.Print("[WARN] dashboard: can't parse to field")
-			//	TODO write a warning about being unable to parse to field
-			//	TODO handle negative duration
-		}
-		toTime = toTime.Add(-t)
-	}
-	candles, err := loadCandles(fromTime, toTime, time.Minute)
+	fromTime, toTime, aggDuration := calculateTimePeriod(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+	)
+	candles, err := loadCandles(fromTime, toTime, aggDuration)
 	if err != nil {
 		// TODO handle being unable to get candles
 		log.Printf("[WARN] dashboard: unable to load candles: %v", err)
