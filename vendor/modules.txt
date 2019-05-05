@@ -3,8 +3,6 @@ github.com/Azure/go-ansiterm/winterm
 github.com/Azure/go-ansiterm
 # github.com/Microsoft/go-winio v0.4.12
 github.com/Microsoft/go-winio
-# github.com/boltdb/bolt v1.3.1
-github.com/boltdb/bolt
 # github.com/containerd/continuity v0.0.0-20181203112020-004b46473808
 github.com/containerd/continuity/pathdriver
 # github.com/davecgh/go-spew v1.1.1
@@ -41,6 +39,8 @@ github.com/docker/docker/api/types/versions
 github.com/docker/go-connections/nat
 # github.com/docker/go-units v0.3.3
 github.com/docker/go-units
+# github.com/etcd-io/bbolt v1.3.2
+github.com/etcd-io/bbolt
 # github.com/fsouza/go-dockerclient v1.4.0
 github.com/fsouza/go-dockerclient
 github.com/fsouza/go-dockerclient/internal/archive
