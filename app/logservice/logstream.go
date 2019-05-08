@@ -1,12 +1,11 @@
 package logservice
 
 import (
+	"bytes"
 	"io"
 	"io/ioutil"
 	"log"
 	"time"
-
-	"bytes"
 
 	"github.com/fsouza/go-dockerclient"
 )

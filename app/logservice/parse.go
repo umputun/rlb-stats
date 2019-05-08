@@ -2,11 +2,10 @@ package logservice
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"regexp"
 	"time"
-
-	"fmt"
 
 	"github.com/umputun/rlb-stats/app/store"
 )

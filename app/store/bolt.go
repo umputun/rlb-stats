@@ -1,12 +1,11 @@
 package store
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"time"
-
-	"bytes"
 
 	bolt "github.com/etcd-io/bbolt"
 )

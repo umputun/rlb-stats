@@ -3,10 +3,8 @@ package api
 import (
 	"errors"
 	"fmt"
-	"net/http"
-
 	"log"
-
+	"net/http"
 	"time"
 
 	"github.com/didip/tollbooth"
@@ -14,6 +12,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+
 	"github.com/umputun/rlb-stats/app/store"
 )
 

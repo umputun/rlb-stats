@@ -1,15 +1,14 @@
 package logservice
 
 import (
+	"fmt"
+	"os"
 	"os/exec"
 	"testing"
 
-	"os"
-
-	"fmt"
-
 	"github.com/fsouza/go-dockerclient"
 	"github.com/stretchr/testify/assert"
+
 	"github.com/umputun/rlb-stats/app/store"
 )
 

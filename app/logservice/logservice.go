@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/fsouza/go-dockerclient"
+
 	"github.com/umputun/rlb-stats/app/store"
 )
 

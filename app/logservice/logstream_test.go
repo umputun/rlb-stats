@@ -1,12 +1,12 @@
 package logservice
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
-	"fmt"
-
 	"github.com/stretchr/testify/assert"
+
 	"github.com/umputun/rlb-stats/app/store"
 )
 
