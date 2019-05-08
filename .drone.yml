@@ -8,5 +8,5 @@ pipeline:
     repo: umputun/rlb-stats
     secrets: [ docker_username, docker_password ]
     tags:
-      - ${DRONE_REPO_BRANCH}
-      - latest
+    - ${DRONE_REPO_BRANCH}
+    - latest

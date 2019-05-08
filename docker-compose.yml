@@ -1,30 +1,30 @@
 version: '3'
 services:
 
-    rlb-stats:
-        build: .
-        image: umputun/rlb-stats:latest
-        hostname: rlb-stats
-        container_name: rlb-stats
+  rlb-stats:
+    build: .
+    image: umputun/rlb-stats:latest
+    hostname: rlb-stats
+    container_name: rlb-stats
 
-        logging:
-          driver: json-file
-          options:
-              max-size: "10m"
-              max-file: "5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
-        volumes:
-            - /tmp:/tmp
-            - /var/run/docker.sock:/var/run/docker.sock
+    volumes:
+    - /tmp:/tmp
+    - /var/run/docker.sock:/var/run/docker.sock
 
-        ports:
-            - "8000:8000"
-            - "8080:8080"
+    ports:
+    - "8000:8000"
+    - "8080:8080"
 
-        # these regexp and and container_name allow to watch for it's own logs and show information from them
-        # which is useful for test purposes
-        environment:
-#        - REGEXP=^(?P<Date>.+) "GET https?://(?P<DestinationNode>.+?)(?P<FileName>/[^?]+)(?:\?.*) HTTP/1.1" from (?P<SourceIP>.+):\d+ - (?:.+) in (?P<AnswerTime>.+)$$
-#        - CONTAINER_NAME=rlb-stats
-#        - DATE_FORMAT=02/Jan/2006:15:04:05 -0700
-#        - LOG_TAIL=all
+    # these regexp and and container_name allow to watch for it's own logs and show information from them
+    # which is useful for test purposes
+    environment:
+#    - REGEXP=^(?P<Date>.+) "GET https?://(?P<DestinationNode>.+?)(?P<FileName>/[^?]+)(?:\?.*) HTTP/1.1" from (?P<SourceIP>.+):\d+ - (?:.+) in (?P<AnswerTime>.+)$$
+#    - CONTAINER_NAME=rlb-stats
+#    - DATE_FORMAT=02/Jan/2006:15:04:05 -0700
+#    - LOG_TAIL=all
