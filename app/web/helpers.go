@@ -4,8 +4,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/umputun/rlb-stats/app/store"
 	"github.com/wcharczuk/go-chart"
+
+	"github.com/umputun/rlb-stats/app/store"
 )
 
 // calculateTimePeriod waits for from and to time.Duration in human-readable form
@@ -38,19 +39,24 @@ func calculateTimePeriod(from, to string) (time.Time, time.Time, time.Duration) 
 
 // prepareSeries require candles and request duration\step data and returns
 // a chart.Series from given candles with given params
-func prepareSeries(candles []store.Candle, fromTime time.Time, toTime time.Time, aggDuration time.Duration, qType string) (series []chart.Series) {
+func prepareSeries(candles []store.Candle, fromTime time.Time, toTime time.Time, aggDuration time.Duration, qType string, filterFilename string) (series []chart.Series) {
 	tempSeries := map[string]chart.TimeSeries{}
 	for _, candle := range candles {
 		switch qType {
 		case "by_file":
 			for filename, count := range candle.Nodes["all"].Files {
+				if filename == "all" {
+					continue
+				}
+				if filterFilename != "" && filename != filterFilename {
+					continue
+				}
 				tempSeries[filename] = chart.TimeSeries{Name: filename,
 					XValues: append(tempSeries[filename].XValues, candle.StartMinute),
 					YValues: append(tempSeries[filename].YValues, float64(count)),
 				}
-				delete(tempSeries, "all")
 			}
-		default:
+		case "by_node":
 			for node, count := range candle.Nodes {
 				tempSeries[node] = chart.TimeSeries{Name: node,
 					XValues: append(tempSeries[node].XValues, candle.StartMinute),

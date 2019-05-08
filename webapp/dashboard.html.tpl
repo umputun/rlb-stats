@@ -19,7 +19,7 @@
     <tbody>
     <tr>
         {{ range $_, $url := .Charts }}
-        <td><img src="{{$url}}" class="img-fluid"></td>
+            <td><img src="{{$url}}" class="img-fluid"></td>
         {{ end }}
     </tr>
     <tr>
@@ -33,10 +33,10 @@
                 </thead>
                 <tbody>
                 {{ range .TopFiles }}
-                <tr>
-                    <th scope="row"><a href="/file_stats?name={{.Name}}">{{.Name}}</a></th>
-                    <td>{{.Volume}}</td>
-                </tr>
+                    <tr>
+                        <th scope="row"><a href="/file_stats?filename={{.Name}}">{{.Name}}</a></th>
+                        <td>{{.Volume}}</td>
+                    </tr>
                 {{ end }}
                 </tbody>
             </table>
@@ -51,10 +51,10 @@
                 </thead>
                 <tbody>
                 {{ range .TopNodes }}
-                <tr>
-                    <th scope="row">{{.Name}}</th>
-                    <td>{{.Volume}}</td>
-                </tr>
+                    <tr>
+                        <th scope="row">{{.Name}}</th>
+                        <td>{{.Volume}}</td>
+                    </tr>
                 {{ end }}
                 </tbody>
             </table>

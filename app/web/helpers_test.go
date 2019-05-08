@@ -5,6 +5,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/wcharczuk/go-chart"
+
+	"github.com/umputun/rlb-stats/app/store"
 )
 
 func TestTime(t *testing.T) {
@@ -23,5 +26,25 @@ func TestTime(t *testing.T) {
 		assert.EqualValues(t, data.fromTime.Truncate(time.Minute), fromTime.Truncate(time.Minute), "fromTime match expected")
 		assert.EqualValues(t, data.toTime.Truncate(time.Minute), toTime.Truncate(time.Minute), "toTime match expected")
 		assert.EqualValues(t, data.fromDuration, fromDuration, "steps duration match expected")
+	}
+}
+
+func TestSeriesGeneration(t *testing.T) {
+	var testSet = map[int]struct {
+		candles     []store.Candle
+		fromTime    time.Time
+		toTime      time.Time
+		aggDuration time.Duration
+		qType       string
+		filename    string
+		result      []chart.Series
+	}{
+		1: {[]store.Candle{}, time.Time{}, time.Time{}.Add(time.Hour), time.Hour, "by_server",
+			"", nil,
+		},
+	}
+	for i, data := range testSet {
+		result := prepareSeries(data.candles, data.fromTime, data.toTime, data.aggDuration, data.qType, data.filename)
+		assert.EqualValues(t, data.result, result, "generated series for set %v match expected", i)
 	}
 }

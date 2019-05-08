@@ -55,6 +55,7 @@ func main() {
 	}
 	uiServer := web.Server{
 		Port:     opts.UIPort,
+		APIPort:  opts.Port,
 		RESTPort: opts.Port,
 	}
 	go restServ.Run()

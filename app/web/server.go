@@ -2,34 +2,37 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
-	"time"
-
-	"github.com/wcharczuk/go-chart"
-
-	"fmt"
-
 	"net/url"
+	"time"
 
 	"github.com/didip/tollbooth"
 	"github.com/didip/tollbooth_chi"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+	"github.com/wcharczuk/go-chart"
+
 	"github.com/umputun/rlb-stats/app/store"
 )
 
 // Server is a UI for rlb-stats rest backend
 type Server struct {
 	Port     int
+	APIPort  int
 	RESTPort int
 }
+
+// Global variable, is it bad?
+var apiPort int
 
 // Run starts a web-server
 func (s *Server) Run() {
 	log.Printf("[INFO] activate UI web server on port %v", s.Port)
+	apiPort = s.APIPort
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger, middleware.Recoverer)
@@ -46,10 +49,9 @@ func (s *Server) Run() {
 
 // GET /
 func getDashboard(w http.ResponseWriter, r *http.Request) {
-	fromTime, toTime, aggDuration := calculateTimePeriod(
-		r.URL.Query().Get("from"),
-		r.URL.Query().Get("to"),
-	)
+	from := r.URL.Query().Get("from")
+	to := r.URL.Query().Get("to")
+	fromTime, toTime, aggDuration := calculateTimePeriod(from, to)
 	candles, err := loadCandles(fromTime, toTime, aggDuration)
 	if err != nil {
 		// TODO handle being unable to get candles
@@ -65,8 +67,8 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 		getTop("files", candles, 10),
 		getTop("nodes", candles, 10),
 		[]string{
-			"/chart",
-			"/chart",
+			fmt.Sprintf("/chart?from=%v&to=%v&type=by_file", from, to),
+			fmt.Sprintf("/chart?from=%v&to=%v&type=by_node", from, to),
 		},
 	}
 
@@ -82,15 +84,14 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 
 // GET /file_stats
 func getFileStats(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
-	if name == "" {
-		log.Printf("no 'name' field passed")
+	filename := r.URL.Query().Get("filename")
+	if filename == "" {
+		log.Printf("no 'filename' field passed")
 		return
 	}
-	fromTime, toTime, aggDuration := calculateTimePeriod(
-		r.URL.Query().Get("from"),
-		r.URL.Query().Get("to"),
-	)
+	from := r.URL.Query().Get("from")
+	to := r.URL.Query().Get("to")
+	fromTime, toTime, aggDuration := calculateTimePeriod(from, to)
 	candles, err := loadCandles(fromTime, toTime, aggDuration)
 	if err != nil {
 		// TODO handle being unable to get candles
@@ -99,12 +100,14 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := struct {
-		Name    string
-		Charts  []string
-		Candles []store.Candle
+		Filename string
+		Charts   []string
+		Candles  []store.Candle
 	}{
-		name,
-		[]string{"/chart"},
+		filename,
+		[]string{
+			fmt.Sprintf("/chart?from=%v&to=%v&type=by_file&filename=%v", from, to, filename),
+		},
 		candles,
 	}
 
@@ -119,6 +122,20 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func drawChart(w http.ResponseWriter, r *http.Request) {
+	fromTime, toTime, aggDuration := calculateTimePeriod(
+		r.URL.Query().Get("from"),
+		r.URL.Query().Get("to"),
+	)
+	candles, err := loadCandles(fromTime, toTime, aggDuration)
+	if err != nil {
+		// TODO handle being unable to get candles
+		log.Printf("[WARN] dashboard: unable to load candles: %v", err)
+		return
+	}
+	qType := r.URL.Query().Get("type")
+	filename := r.URL.Query().Get("filename")
+	series := prepareSeries(candles, fromTime, toTime, aggDuration, qType, filename)
+
 	graph := chart.Chart{
 		XAxis: chart.XAxis{
 			Style: chart.StyleShow(),
@@ -132,42 +149,7 @@ func drawChart(w http.ResponseWriter, r *http.Request) {
 				Left: 20,
 			},
 		},
-		Series: []chart.Series{
-			chart.TimeSeries{
-				Name: "A test series",
-				XValues: []time.Time{
-					time.Now().AddDate(0, 0, -10),
-					time.Now().AddDate(0, 0, -9),
-					time.Now().AddDate(0, 0, -8),
-					time.Now().AddDate(0, 0, -7),
-					time.Now().AddDate(0, 0, -6),
-					time.Now().AddDate(0, 0, -5),
-					time.Now().AddDate(0, 0, -4),
-					time.Now().AddDate(0, 0, -3),
-					time.Now().AddDate(0, 0, -2),
-					time.Now().AddDate(0, 0, -1),
-					time.Now(),
-				},
-				YValues: []float64{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0},
-			},
-			chart.TimeSeries{
-				Name: "A test series",
-				XValues: []time.Time{
-					time.Now().AddDate(0, 0, -10),
-					time.Now().AddDate(0, 0, -9),
-					time.Now().AddDate(0, 0, -8),
-					time.Now().AddDate(0, 0, -7),
-					time.Now().AddDate(0, 0, -6),
-					time.Now().AddDate(0, 0, -5),
-					time.Now().AddDate(0, 0, -4),
-					time.Now().AddDate(0, 0, -3),
-					time.Now().AddDate(0, 0, -2),
-					time.Now().AddDate(0, 0, -1),
-					time.Now(),
-				},
-				YValues: []float64{11.0, 10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0},
-			},
-		},
+		Series: series,
 	}
 
 	graph.Elements = []chart.Renderable{
@@ -175,7 +157,7 @@ func drawChart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "image/png")
-	err := graph.Render(chart.PNG, w)
+	err = graph.Render(chart.PNG, w)
 	if err != nil {
 		// TODO handle graph generation problem
 		log.Printf("[WARN] dashboard: unable to render graph: %v", err)
@@ -184,7 +166,8 @@ func drawChart(w http.ResponseWriter, r *http.Request) {
 
 func loadCandles(from time.Time, to time.Time, duration time.Duration) ([]store.Candle, error) {
 	var result []store.Candle
-	candleGetURL := fmt.Sprintf("http://localhost:8080/api/candle?from=%v&to=%v&aggregate=%v",
+	candleGetURL := fmt.Sprintf("http://localhost:%v/api/candle?from=%v&to=%v&aggregate=%v",
+		apiPort,
 		url.QueryEscape(from.Format(time.RFC3339)),
 		url.QueryEscape(to.Format(time.RFC3339)),
 		duration)
