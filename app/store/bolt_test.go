@@ -1,6 +1,7 @@
 package store
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -10,7 +11,10 @@ import (
 
 func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	// normal flow
-	s, err := NewBolt("/tmp/test.bd")
+	file, err := ioutil.TempFile("/tmp/", "bolt_test.bd.")
+	assert.Nil(t, err, "created temp file")
+
+	s, err := NewBolt(file.Name())
 	assert.Nil(t, err, "engine created")
 
 	testCandle := NewCandle()
@@ -20,7 +24,7 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	assert.Nil(t, err, "key found")
 	assert.EqualValues(t, testCandle, savedCandle[0], "matches loaded msg")
 
-	assert.Nil(t, os.Remove("/tmp/test.bd"), "removed fine")
+	assert.Nil(t, os.Remove(file.Name()), "removed fine")
 
 	// broken DB file
 	_, err = NewBolt("/dev/null")
