@@ -68,7 +68,7 @@ func getLogStreamer(d *docker.Client, containerName string, tailOption string, l
 
 func startLogStreamer(ls logStreamer, p *Parser, le *lineExtractor, storage store.Engine) {
 
-	ls.Go()     // start listening to container logs
+	ls.Go() // start listening to container logs
 	go func() { // start parser on logs
 		for line := range le.Ch() {
 			entry, err := p.Do(line)

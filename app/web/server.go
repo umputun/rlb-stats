@@ -1,12 +1,10 @@
 package web
 
 import (
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/didip/tollbooth"
@@ -26,13 +24,17 @@ type Server struct {
 	RESTPort int
 }
 
-// Global variable, is it bad?
-var apiPort int
+// Global anonymous struct, is it bad?
+var apiClient struct {
+	apiURL     string
+	httpClient *http.Client
+}
 
 // Run starts a web-server
 func (s *Server) Run() {
 	log.Printf("[INFO] activate UI web server on port %v", s.Port)
-	apiPort = s.APIPort
+	apiClient.apiURL = fmt.Sprintf("http://localhost:%v", s.APIPort)
+	apiClient.httpClient = &http.Client{Timeout: 60 * time.Second}
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger, middleware.Recoverer)
@@ -54,8 +56,8 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 	fromTime, toTime, aggDuration := calculateTimePeriod(from, to)
 	candles, err := loadCandles(fromTime, toTime, aggDuration)
 	if err != nil {
-		// TODO handle being unable to get candles
 		log.Printf("[WARN] dashboard: unable to load candles: %v", err)
+		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusBadRequest)
 		return
 	}
 
@@ -121,6 +123,7 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 	render.Status(r, http.StatusOK)
 }
 
+// GET /chart
 func drawChart(w http.ResponseWriter, r *http.Request) {
 	fromTime, toTime, aggDuration := calculateTimePeriod(
 		r.URL.Query().Get("from"),
@@ -159,26 +162,7 @@ func drawChart(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/png")
 	err = graph.Render(chart.PNG, w)
 	if err != nil {
-		// TODO handle graph generation problem
+		http.Error(w, fmt.Sprintf("unable to render graph: %v", err), http.StatusBadRequest)
 		log.Printf("[WARN] dashboard: unable to render graph: %v", err)
 	}
-}
-
-func loadCandles(from time.Time, to time.Time, duration time.Duration) ([]store.Candle, error) {
-	var result []store.Candle
-	candleGetURL := fmt.Sprintf("http://localhost:%v/api/candle?from=%v&to=%v&aggregate=%v",
-		apiPort,
-		url.QueryEscape(from.Format(time.RFC3339)),
-		url.QueryEscape(to.Format(time.RFC3339)),
-		duration)
-	var myClient = &http.Client{Timeout: 60 * time.Second}
-	r, err := myClient.Get(candleGetURL)
-	if err != nil {
-		return nil, err
-	}
-	err = json.NewDecoder(r.Body).Decode(&result)
-	if err != nil {
-		return nil, err
-	}
-	return result, r.Body.Close()
 }

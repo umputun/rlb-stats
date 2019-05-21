@@ -1,7 +1,10 @@
 package web
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
+	"net/url"
 	"time"
 
 	"github.com/wcharczuk/go-chart"
@@ -37,6 +40,25 @@ func calculateTimePeriod(from, to string) (time.Time, time.Time, time.Duration) 
 	return fromTime, toTime, toTime.Sub(fromTime).Truncate(time.Second) / 10
 }
 
+// loadCandles loads candles for given period of time aggregated by given duration
+func loadCandles(from time.Time, to time.Time, duration time.Duration) ([]store.Candle, error) {
+	var result []store.Candle
+	candleGetURL := fmt.Sprintf("%v/api/candle?from=%v&to=%v&aggregate=%v",
+		apiClient.apiURL,
+		url.QueryEscape(from.Format(time.RFC3339)),
+		url.QueryEscape(to.Format(time.RFC3339)),
+		duration)
+	r, err := apiClient.httpClient.Get(candleGetURL)
+	if err != nil {
+		return nil, err
+	}
+	err = json.NewDecoder(r.Body).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+	return result, r.Body.Close()
+}
+
 // prepareSeries require candles and request duration\step data and returns
 // a chart.Series from given candles with given params
 func prepareSeries(candles []store.Candle, fromTime time.Time, toTime time.Time, aggDuration time.Duration, qType string, filterFilename string) (series []chart.Series) {
@@ -58,6 +80,9 @@ func prepareSeries(candles []store.Candle, fromTime time.Time, toTime time.Time,
 			}
 		case "by_node":
 			for node, count := range candle.Nodes {
+				if node == "all" {
+					continue
+				}
 				tempSeries[node] = chart.TimeSeries{Name: node,
 					XValues: append(tempSeries[node].XValues, candle.StartMinute),
 					YValues: append(tempSeries[node].YValues, float64(count.Volume)),
