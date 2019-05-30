@@ -61,7 +61,7 @@ func (p *Parser) Do(line string) (entry store.LogEntry, err error) {
 		case "AnswerTime":
 			entry.AnswerTime, err = time.ParseDuration(m)
 		case "Date":
-			entry.Date, err = time.Parse(p.dateFormat, m)
+			entry.Date, err = time.ParseInLocation(p.dateFormat, m, time.Local)
 		}
 		if err != nil {
 			return entry, err
