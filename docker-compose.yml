@@ -28,3 +28,4 @@ services:
 #    - CONTAINER_NAME=rlb-stats
 #    - DATE_FORMAT=02/Jan/2006:15:04:05 -0700
 #    - LOG_TAIL=all
+#    - TIME_ZONE=America/Chicago
