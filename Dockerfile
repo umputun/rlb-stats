@@ -5,13 +5,13 @@ ADD . /app
 WORKDIR /app
 ENV GOFLAGS="-mod=vendor" GO111MODULE=on
 
-#RUN go test -v ./...
-#
-#RUN golangci-lint run --disable-all --deadline=300s --enable=vet --enable=vetshadow --enable=golint \
-#    --enable=staticcheck --enable=ineffassign --enable=goconst --enable=errcheck --enable=unconvert \
-#    --enable=deadcode --enable=gosimple ./...
+RUN go test -v ./...
 
-#RUN mkdir -p target && /script/coverage.sh
+RUN golangci-lint run --disable-all --deadline=300s --enable=vet --enable=vetshadow --enable=golint \
+    --enable=staticcheck --enable=ineffassign --enable=goconst --enable=errcheck --enable=unconvert \
+    --enable=deadcode --enable=gosimple ./...
+
+RUN mkdir -p target && /script/coverage.sh
 
 RUN go build -o rlb-stats -ldflags "-X main.revision=$(git rev-parse --abbrev-ref HEAD)-$(git describe --abbrev=7 --always --tags)-$(date +%Y%m%d-%H:%M:%S)" ./app
 
