@@ -56,7 +56,7 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 	fromTime, toTime, aggDuration := calculateTimePeriod(from, to)
 	candles, err := loadCandles(fromTime, toTime, aggDuration)
 	if err != nil {
-		log.Printf("[WARN] dashboard: unable to load candles: %v", err)
+		log.Printf("[WARN] /: unable to load candles: %v", err)
 		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusBadRequest)
 		return
 	}
@@ -64,20 +64,18 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 	result := struct {
 		TopFiles []volumeStats
 		TopNodes []volumeStats
-		Charts   []string
+		From, To string
 	}{
 		getTop("files", candles, 10),
 		getTop("nodes", candles, 10),
-		[]string{
-			fmt.Sprintf("/chart?from=%v&to=%v&type=by_file", from, to),
-			fmt.Sprintf("/chart?from=%v&to=%v&type=by_node", from, to),
-		},
+		from,
+		to,
 	}
 
 	t := template.Must(template.ParseFiles("webapp/dashboard.html.tpl"))
 	err = t.Execute(w, result)
 	if err != nil {
-		// TODO handle template execution problem
+		http.Error(w, fmt.Sprintf("unable to execute template: %v", err), http.StatusInternalServerError)
 		log.Printf("[WARN] dashboard: unable to execute template: %v", err)
 		return
 	}
@@ -88,7 +86,7 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 func getFileStats(w http.ResponseWriter, r *http.Request) {
 	filename := r.URL.Query().Get("filename")
 	if filename == "" {
-		log.Printf("no 'filename' field passed")
+		http.Error(w, fmt.Sprint("'filename' parameter is required"), http.StatusUnprocessableEntity)
 		return
 	}
 	from := r.URL.Query().Get("from")
@@ -96,27 +94,26 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 	fromTime, toTime, aggDuration := calculateTimePeriod(from, to)
 	candles, err := loadCandles(fromTime, toTime, aggDuration)
 	if err != nil {
-		// TODO handle being unable to get candles
-		log.Printf("[WARN] dashboard: unable to load candles: %v", err)
+		log.Printf("[WARN] /file_stats: unable to load candles: %v", err)
+		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	result := struct {
 		Filename string
-		Charts   []string
 		Candles  []store.Candle
+		From, To string
 	}{
 		filename,
-		[]string{
-			fmt.Sprintf("/chart?from=%v&to=%v&type=by_file&filename=%v", from, to, filename),
-		},
 		candles,
+		from,
+		to,
 	}
 
 	t := template.Must(template.ParseFiles("webapp/file_stats.html.tpl"))
 	err = t.Execute(w, result)
 	if err != nil {
-		// TODO handle template execution problem
+		http.Error(w, fmt.Sprintf("unable to execute template: %v", err), http.StatusInternalServerError)
 		log.Printf("[WARN] dashboard: unable to execute template: %v", err)
 		return
 	}
@@ -131,8 +128,8 @@ func drawChart(w http.ResponseWriter, r *http.Request) {
 	)
 	candles, err := loadCandles(fromTime, toTime, aggDuration)
 	if err != nil {
-		// TODO handle being unable to get candles
 		log.Printf("[WARN] dashboard: unable to load candles: %v", err)
+		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusInternalServerError)
 		return
 	}
 	qType := r.URL.Query().Get("type")

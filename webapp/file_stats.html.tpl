@@ -17,9 +17,7 @@
     </thead>
     <tbody>
     <tr>
-        {{ range $_, $url := .Charts }}
-            <td><img src="{{$url}}" class="img-fluid" alt="{{$.Filename}} download stats"></td>
-        {{ end }}
+        <td><img src="/chart?type=by_file&filename={{.Filename}}{{if .From}}&from={{.From}}{{end}}{{if .To}}&to={{.To}}{{end}}" class="img-fluid" alt="{{$.Filename}} download stats"></td>
     </tr>
     </tbody>
 </table>
