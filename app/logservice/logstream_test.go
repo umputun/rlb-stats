@@ -38,7 +38,7 @@ func TestLogExtraction(t *testing.T) {
 		FileName:        "/api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3",
 		DestinationNode: "n6.radio-t.com",
 		AnswerTime:      time.Nanosecond * 710679,
-		Date:            time.Date(2017, 9, 17, 12, 54, 54, 95329000, time.Time{}.Location()),
+		Date:            time.Date(2017, 9, 17, 12, 54, 54, 95329000, time.Local),
 	}
 	entriesParsed := []store.LogEntry{entryParsed, entryParsed, entryParsed}
 	assert.Equal(t, entriesParsed, entries, "entries parsed")
