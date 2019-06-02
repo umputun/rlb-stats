@@ -95,3 +95,17 @@ func prepareSeries(candles []store.Candle, fromTime time.Time, toTime time.Time,
 	}
 	return series
 }
+
+// valueFormatter formats float values without decimal part as integers,
+// and don't return anything for any other input
+func valueFormatter(v interface{}) string {
+	if vt, isTime := v.(time.Time); isTime {
+		return vt.Format(time.RFC3339)
+	} else if vf, isFloat := v.(float64); isFloat {
+		// print number if only have no decimal part
+		if vf == float64(int(vf)) {
+			return fmt.Sprintf("%.0f", vf)
+		}
+	}
+	return ""
+}

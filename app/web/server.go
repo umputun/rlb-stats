@@ -138,10 +138,12 @@ func drawChart(w http.ResponseWriter, r *http.Request) {
 
 	graph := chart.Chart{
 		XAxis: chart.XAxis{
-			Style: chart.StyleShow(),
+			Style:          chart.StyleShow(),
+			ValueFormatter: chart.TimeValueFormatterWithFormat(time.RFC3339),
 		},
 		YAxis: chart.YAxis{
-			Style: chart.StyleShow(),
+			Style:          chart.StyleShow(),
+			ValueFormatter: valueFormatter,
 		},
 		Background: chart.Style{
 			Padding: chart.Box{
