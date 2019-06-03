@@ -61,7 +61,7 @@ func loadCandles(from time.Time, to time.Time, duration time.Duration) ([]store.
 
 // prepareSeries require candles and request duration\step data and returns
 // a chart.Series from given candles with given params
-func prepareSeries(candles []store.Candle, fromTime time.Time, toTime time.Time, aggDuration time.Duration, qType string, filterFilename string) (series []chart.Series) {
+func prepareSeries(candles []store.Candle, qType string, filterFilename string) (series []chart.Series) {
 	tempSeries := map[string]chart.TimeSeries{}
 	for _, candle := range candles {
 		switch qType {

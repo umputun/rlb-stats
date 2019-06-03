@@ -34,20 +34,17 @@ func TestTime(t *testing.T) {
 
 func TestSeriesGeneration(t *testing.T) {
 	var testSet = map[int]struct {
-		candles     []store.Candle
-		fromTime    time.Time
-		toTime      time.Time
-		aggDuration time.Duration
-		qType       string
-		filename    string
-		result      []chart.Series
+		candles  []store.Candle
+		qType    string
+		filename string
+		result   []chart.Series
 	}{
-		1: {[]store.Candle{}, time.Time{}, time.Time{}.Add(time.Hour), time.Hour, "by_server",
+		1: {[]store.Candle{}, "by_server",
 			"", nil,
 		},
 	}
 	for i, data := range testSet {
-		result := prepareSeries(data.candles, data.fromTime, data.toTime, data.aggDuration, data.qType, data.filename)
+		result := prepareSeries(data.candles, data.qType, data.filename)
 		assert.EqualValues(t, data.result, result, "generated series for set %v match expected", i)
 	}
 }

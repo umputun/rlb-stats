@@ -134,7 +134,7 @@ func drawChart(w http.ResponseWriter, r *http.Request) {
 	}
 	qType := r.URL.Query().Get("type")
 	filename := r.URL.Query().Get("filename")
-	series := prepareSeries(candles, fromTime, toTime, aggDuration, qType, filename)
+	series := prepareSeries(candles, qType, filename)
 
 	graph := chart.Chart{
 		XAxis: chart.XAxis{
