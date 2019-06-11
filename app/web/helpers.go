@@ -99,12 +99,13 @@ func prepareSeries(candles []store.Candle, qType string, filterFilename string) 
 // valueFormatter formats float values without decimal part as integers,
 // and don't return anything for any other input
 func valueFormatter(v interface{}) string {
-	if vt, isTime := v.(time.Time); isTime {
-		return vt.Format(time.RFC3339)
-	} else if vf, isFloat := v.(float64); isFloat {
+	switch v := v.(type) {
+	case time.Time:
+		return v.Format(time.RFC3339)
+	case float64:
 		// print number if only have no decimal part
-		if vf == float64(int(vf)) {
-			return fmt.Sprintf("%.0f", vf)
+		if v == float64(int(v)) {
+			return fmt.Sprintf("%.0f", v)
 		}
 	}
 	return ""
