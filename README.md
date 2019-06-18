@@ -21,7 +21,7 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
 | ---------------| ---------------| ------------------------------| ------------------------------- |
 | container_name | CONTAINER_NAME |                               | container name, _required_ for data collection |
 | docker         | DOCKER_HOST    | `unix:///var/run/docker.sock` | docker host                     |
-| log_tail       | LOG_TAIL       | `0`                           | How many log entries to load from container, please set to 'all' on the first run |
+| log_tail       | LOG_TAIL       | `1000`                        | how many log entries to load from container |
 | regexp         | REGEXP         | `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$` | log line regexp |
 | date_format    | DATE_FORMAT    | `2006/01/02 15:04:05`         | format of the date in log line  |
 | ui_port        | UI_PORT        | `8000`                        | UI server port                  |
