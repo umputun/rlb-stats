@@ -13,7 +13,7 @@ import (
 )
 
 var opts struct {
-	BoltDB        string `long:"bolt" env:"BOLT_FILE" default:"/tmp/rlb-stats.bd" description:"boltdb file"`
+	BoltDB        string `long:"bolt" env:"BOLT_FILE" default:"/tmp/rlb-stats.bd" description:"boltdb file path"`
 	Port          int    `long:"port" env:"PORT" default:"8080" description:"REST server port"`
 	UIPort        int    `long:"ui_port" env:"UI_PORT" default:"8000" description:"UI server port"`
 	ContainerName string `long:"container_name" env:"CONTAINER_NAME" default:"" description:"container name"`
