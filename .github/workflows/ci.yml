@@ -24,7 +24,7 @@ jobs:
       with:
         go-version: 1.13
 
-    - name: build and test backend
+    - name: build and test
       run: |
         export TZ="America/Chicago"
         go test -mod=vendor -timeout=60s -covermode=count -coverprofile=$GITHUB_WORKSPACE/profile.cov_tmp ./...
