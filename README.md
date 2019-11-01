@@ -1,6 +1,6 @@
 # rlb-stats [![Build Status](https://github.com/umputun/rlb-stats/workflows/CI%20Build/badge.svg)](https://github.com/umputun/rlb-stats/actions?query=workflow%3A%22CI+Build%22) [![Coverage Status](https://coveralls.io/repos/github/umputun/rlb-stats/badge.svg?branch=master)](https://coveralls.io/github/umputun/rlb-stats?branch=master) [![Docker Automated build](https://img.shields.io/docker/automated/jrottenberg/ffmpeg.svg)](https://hub.docker.com/r/umputun/rlb-stats/)
 
-Stats collector for RLB with REST interface, written in Go.
+Stats collector for [RLB](github.com/umputun/rlb) with REST interface and WEB UI.
 
 ## Run instructions
 
