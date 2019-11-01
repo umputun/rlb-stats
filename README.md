@@ -30,6 +30,16 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
 | dbg            | DEBUG          | `false`                       | debug mode                      |
 |                | TIME_ZONE      | `America/Chicago`             | container timezone              |
 
+## How to set up test stand
+
+1. Uncomment `environment` section and `user` line in `docker-compose.yml`: it will result in container listening to it's own HTTP access logs
+1. Run `docker-compose up -d` in order to start rlb-stats
+1. API: Open [http://127.0.0.1:8080/api/candle](http://127.0.0.1:8080/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m)
+endpoint from example below to see all aggregated logs since the start of the container
+(would empty for a minute after you open this page for a first time)
+1. Dashboard: Open http://127.0.0.1:8000/?from=20m URL to see dashboard with statistics
+
+
 ## API
 
 ### Load candles
@@ -42,16 +52,7 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
 
 #### Example
 
-##### How to get test stand
-
-1. Uncomment `environment` section and `user` line in `docker-compose.yml`: it will result in container listening to it's own HTTP access logs
-1. Run `docker-compose up -d` in order to start rlb-stats
-1. API: Open [http://127.0.0.1:8080/api/candle](http://127.0.0.1:8080/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m)
-endpoint from example below to see all aggregated logs since the start of the container
-(would empty for a minute after you open this page for a first time)
-1. Dashboard: Open http://127.0.0.1:8000/?from=20m URL to see dashboard with statistics
-
-##### API calls Examples
+##### API calls
 
 <details>
 <summary>api/candle</summary>
