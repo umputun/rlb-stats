@@ -4,6 +4,7 @@ FROM umputun/baseimage:buildgo-latest as build
 ARG COVERALLS_TOKEN
 ARG CI
 ARG GIT_BRANCH
+ARG SKIP_TEST
 
 ENV GOFLAGS="-mod=vendor" GO111MODULE=on
 
@@ -11,21 +12,14 @@ ADD . /app
 WORKDIR /app
 
 # run tests
-RUN go test -v ./...
+RUN \
+    if [ -z "$SKIP_TEST" ] ; then \
+        go test -timeout=30s  ./... && \
+        golangci-lint run --disable-all --deadline=300s --enable=vet --enable=vetshadow --enable=golint \
+          --enable=staticcheck --enable=ineffassign --enable=goconst --enable=errcheck --enable=unconvert \
+          --enable=deadcode --enable=gosimple ./... ; \
+    else echo "skip tests and linter" ; fi
 
-# linters
-RUN golangci-lint run --disable-all --deadline=300s --enable=vet --enable=vetshadow --enable=golint \
-    --enable=staticcheck --enable=ineffassign --enable=goconst --enable=errcheck --enable=unconvert \
-    --enable=deadcode --enable=gosimple ./...
-
-# coverage report
-RUN mkdir -p target && /script/coverage.sh
-
-# submit coverage to coverals if COVERALLS_TOKEN in env
-RUN if [ -z "$COVERALLS_TOKEN" ] ; then \
-    echo "coverall not enabled" ; \
-    else goveralls -coverprofile=.cover/cover.out -service=travis-ci -repotoken $COVERALLS_TOKEN || echo "coverall failed!"; fi && \
-    cat .cover/cover.out
 
 RUN \
     if [ -z "$CI" ] ; then \
