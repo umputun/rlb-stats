@@ -46,11 +46,10 @@ jobs:
       run: |
         export GIT_BRANCH="${GITHUB_REF/refs\/heads\//}"
         export GIT_TAG="${GITHUB_REF/refs\/tags\//}"
-
         if [[ "$GIT_TAG" != "$GITHUB_REF" ]]; then
           export GIT_BRANCH=$GIT_TAG
         fi
-
+        echo "covergare brach $GIT_BRANCH, tag $GIT_TAG"
         $(go env GOPATH)/bin/goveralls -service="GitHub Action" -coverprofile=$GITHUB_WORKSPACE/profile.cov -repotoken $COVERALLS_TOKEN
       env:
         COVERALLS_TOKEN: ${{secrets.COVERALLS_TOKEN}}
