@@ -1,6 +1,11 @@
 name: CI Build
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+    tags:
+  pull_request:
+
 
 jobs:
   build:
@@ -49,7 +54,7 @@ jobs:
         if [[ "$GIT_TAG" != "$GITHUB_REF" ]]; then
           export GIT_BRANCH=$GIT_TAG
         fi
-        echo "covergare brach $GIT_BRANCH, tag $GIT_TAG"
+        echo "coverage for branch $GIT_BRANCH"
         $(go env GOPATH)/bin/goveralls -service="GitHub Action" -coverprofile=$GITHUB_WORKSPACE/profile.cov -repotoken $COVERALLS_TOKEN
       env:
         COVERALLS_TOKEN: ${{secrets.COVERALLS_TOKEN}}
