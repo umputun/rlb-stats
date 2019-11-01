@@ -21,11 +21,11 @@ services:
     - "8000:8000"
     - "8080:8080"
 
+    # useful for test purposes if you don't have user 1001 owning /var/run/docker.sock
+#    user: root
     # these regexp and and container_name allow to watch for it's own logs and show information from them
     # which is useful for test purposes
 #    environment:
 #    - REGEXP=^(?P<Date>.+) "GET https?://(?P<DestinationNode>.+?)(?P<FileName>/[^?]+)(?:\?.*) HTTP/1.1" from (?P<SourceIP>.+):\d+ - (?:.+) in (?P<AnswerTime>.+)$$
 #    - CONTAINER_NAME=rlb-stats
-#    - DATE_FORMAT=02/Jan/2006:15:04:05 -0700
 #    - LOG_TAIL=all
-#    - TIME_ZONE=America/Chicago
