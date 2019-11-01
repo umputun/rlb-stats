@@ -44,18 +44,18 @@ jobs:
           --enable=ineffassign --enable=varcheck ./... ;
 
     - name: submit coverage
-        run: |
-          export GIT_BRANCH="${GITHUB_REF/refs\/heads\//}"
-          export GIT_TAG="${GITHUB_REF/refs\/tags\//}"
+      run: |
+        export GIT_BRANCH="${GITHUB_REF/refs\/heads\//}"
+        export GIT_TAG="${GITHUB_REF/refs\/tags\//}"
 
-          if [[ "$GIT_TAG" != "$GITHUB_REF" ]]; then
-            export GIT_BRANCH=$GIT_TAG
-          fi
+        if [[ "$GIT_TAG" != "$GITHUB_REF" ]]; then
+          export GIT_BRANCH=$GIT_TAG
+        fi
 
-          cd backend
-          $(go env GOPATH)/bin/goveralls -service="GitHub Action" -coverprofile=$GITHUB_WORKSPACE/profile.cov -repotoken $COVERALLS_TOKEN
-        env:
-          COVERALLS_TOKEN: ${{secrets.COVERALLS_TOKEN}}
+        cd backend
+        $(go env GOPATH)/bin/goveralls -service="GitHub Action" -coverprofile=$GITHUB_WORKSPACE/profile.cov -repotoken $COVERALLS_TOKEN
+      env:
+        COVERALLS_TOKEN: ${{secrets.COVERALLS_TOKEN}}
 
     - name: build image
       run:  docker build --build-arg SKIP_TEST=true --build-arg CI=github .
