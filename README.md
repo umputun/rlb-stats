@@ -1,4 +1,4 @@
-# rlb-stats ![Build Status](https://github.com/umputun/rlb-stats/workflows/CI%20Build/badge.svg)
+# rlb-stats [![Build Status](https://github.com/umputun/rlb-stats/workflows/CI%20Build/badge.svg)](https://github.com/umputun/rlb-stats/actions?query=workflow%3A%22CI+Build%22)
 
 Stats collector for RLB with REST interface, written in Go.
 
