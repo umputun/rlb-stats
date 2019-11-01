@@ -21,7 +21,7 @@ var opts struct {
 	LogTail       string `long:"log_tail" env:"LOG_TAIL" default:"1000" description:"how many log entries to load from container, set to 'all' on the first run"`
 	RegEx         string `long:"regexp" env:"REGEXP" description:"log line regexp" default:"^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$"`
 	DateFormat    string `long:"date_format" env:"DATE_FORMAT" description:"format of the date in log line" default:"2006/01/02 15:04:05"`
-	Dbg           bool   `long:"dbg" description:"debug mode"`
+	Dbg           bool   `long:"dbg" env:"DEBUG" description:"debug mode"`
 }
 
 var revision string

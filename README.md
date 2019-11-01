@@ -1,4 +1,4 @@
-# rlb-stats  [![Build Status](http://drone.umputun.com/api/badges/umputun/rlb-stats/status.svg)](http://drone.umputun.com/umputun/rlb-stats)
+# rlb-stats ![Build Status](https://github.com/umputun/rlb-stats/workflows/CI%20Build/badge.svg)
 
 Stats collector for RLB with REST interface, written in Go.
 
@@ -27,7 +27,7 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
 | ui_port        | UI_PORT        | `8000`                        | UI server port                  |
 | port           | PORT           | `8080`                        | REST server port                |
 | bolt           | BOLT_FILE      | `/tmp/rlb-stats.bd`           | boltdb file path                |
-| dbg            |                | `false`                       | debug mode                      |
+| dbg            | DEBUG          | `false`                       | debug mode                      |
 |                | TIME_ZONE      | `America/Chicago`             | container timezone              |
 
 ## API
