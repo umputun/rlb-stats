@@ -51,7 +51,6 @@ jobs:
           export GIT_BRANCH=$GIT_TAG
         fi
 
-        cd backend
         $(go env GOPATH)/bin/goveralls -service="GitHub Action" -coverprofile=$GITHUB_WORKSPACE/profile.cov -repotoken $COVERALLS_TOKEN
       env:
         COVERALLS_TOKEN: ${{secrets.COVERALLS_TOKEN}}
