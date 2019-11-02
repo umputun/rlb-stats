@@ -51,6 +51,7 @@ func (s *Server) routes() chi.Router {
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/candle", s.getCandle)
 	})
+
 	return r
 }
 

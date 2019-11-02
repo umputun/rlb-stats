@@ -19,9 +19,9 @@ import (
 
 // Server is a UI for rlb-stats rest backend
 type Server struct {
-	Port     int
-	APIPort  int
-	RESTPort int
+	address string // set only in tests
+	Port    int
+	APIPort int
 }
 
 // Global anonymous struct, is it bad?
@@ -33,6 +33,10 @@ var apiClient struct {
 // Run starts a web-server
 func (s *Server) Run() {
 	log.Printf("[INFO] activate UI web server on port %v", s.Port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%v:%v", s.address, s.Port), s.routes()))
+}
+
+func (s *Server) routes() chi.Router {
 	apiClient.apiURL = fmt.Sprintf("http://localhost:%v", s.APIPort)
 	apiClient.httpClient = &http.Client{Timeout: 60 * time.Second}
 	r := chi.NewRouter()
@@ -46,7 +50,7 @@ func (s *Server) Run() {
 	r.Get("/file_stats", getFileStats)
 	r.Get("/chart", drawChart)
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", s.Port), r))
+	return r
 }
 
 // GET /
@@ -57,7 +61,7 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 	candles, err := loadCandles(fromTime, toTime, aggDuration)
 	if err != nil {
 		log.Printf("[WARN] /: unable to load candles: %v", err)
-		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusInternalServerError)
 		return
 	}
 
