@@ -24,8 +24,7 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
 | log_tail       | LOG_TAIL       | `1000`                        | how many log entries to load from container |
 | regexp         | REGEXP         | `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$` | log line regexp |
 | date_format    | DATE_FORMAT    | `2006/01/02 15:04:05`         | format of the date in log line  |
-| ui_port        | UI_PORT        | `80`                          | UI server port                  |
-| port           | PORT           | `8080`                        | REST server port                |
+| port           | PORT           | `80`                          | Web server port                |
 | bolt           | BOLT_FILE      | `/tmp/rlb-stats.bd`           | boltdb file path                |
 | dbg            | DEBUG          | `false`                       | debug mode                      |
 |                | TIME_ZONE      | `America/Chicago`             | container timezone              |
