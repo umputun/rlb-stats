@@ -24,11 +24,11 @@ func TestTime(t *testing.T) {
 		3: {"168h", "8h", time.Now().Add(time.Hour * -168), time.Now().Add(time.Hour * -8), time.Hour * 160 / 10},
 		4: {"wrong", "wrong", time.Now().Add(time.Hour * -168), time.Now(), time.Hour * 168 / 10},
 	}
-	for _, data := range testSet {
+	for i, data := range testSet {
 		fromTime, toTime, fromDuration := calculateTimePeriod(data.from, data.to)
-		assert.EqualValues(t, data.fromTime.Truncate(time.Minute), fromTime.Truncate(time.Minute), "fromTime match expected")
-		assert.EqualValues(t, data.toTime.Truncate(time.Minute), toTime.Truncate(time.Minute), "toTime match expected")
-		assert.EqualValues(t, data.fromDuration, fromDuration, "steps duration match expected")
+		assert.EqualValues(t, data.fromTime.Truncate(time.Minute), fromTime.Truncate(time.Minute), "fromTime match expected for test set %d", i)
+		assert.EqualValues(t, data.toTime.Truncate(time.Minute), toTime.Truncate(time.Minute), "toTime match expected for test set %d", i)
+		assert.EqualValues(t, data.fromDuration, fromDuration, "steps duration match expected for test set %d", i)
 	}
 }
 
