@@ -7,7 +7,9 @@ import (
 )
 
 // aggregateCandles takes candles from input, and aggregate them by aggInterval truncated to minutes
-func aggregateCandles(candles []store.Candle, aggInterval time.Duration) (result []store.Candle) {
+func aggregateCandles(candles []store.Candle, aggInterval time.Duration) []store.Candle {
+	// initialize result in this way to return empty slice instead of nil for empty result
+	result := []store.Candle{}
 
 	// protect against less than 1m interval truncated to zero
 	if aggInterval < time.Minute {

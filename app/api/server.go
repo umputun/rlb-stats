@@ -21,6 +21,7 @@ type JSON map[string]interface{}
 
 // Server is a rest interface to storage
 type Server struct {
+	address string // set only in tests
 	Engine  store.Engine
 	Port    int
 	Version string
@@ -35,6 +36,10 @@ func sendErrorJSON(w http.ResponseWriter, r *http.Request, code int, err error, 
 // Run starts a web-server
 func (s *Server) Run() {
 	log.Printf("[INFO] activate rest server on port %v", s.Port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%v:%v", s.address, s.Port), s.routes()))
+}
+
+func (s *Server) routes() chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger, middleware.Recoverer)
@@ -46,8 +51,7 @@ func (s *Server) Run() {
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/candle", s.getCandle)
 	})
-
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", s.Port), r))
+	return r
 }
 
 // GET /candle

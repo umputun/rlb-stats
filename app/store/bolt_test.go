@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSaveAndLoadLogEntryBolt(t *testing.T) {
@@ -18,10 +19,12 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	assert.Nil(t, err, "engine created")
 
 	testCandle := NewCandle()
+	testCandle.StartMinute = time.Unix(0, 0)
 
 	assert.Nil(t, s.Save(testCandle), "saved fine")
-	savedCandle, err := s.Load(time.Time{}, time.Time{})
+	savedCandle, err := s.Load(time.Unix(0, 0), time.Unix(0, 0).Add(time.Hour))
 	assert.Nil(t, err, "key found")
+	require.NotEqual(t, []Candle{}, savedCandle, "key found")
 	assert.EqualValues(t, testCandle, savedCandle[0], "matches loaded msg")
 
 	assert.Nil(t, os.Remove(file.Name()), "removed fine")
