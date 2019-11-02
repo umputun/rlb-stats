@@ -1,10 +1,8 @@
 package web
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/url"
 	"time"
 
 	"github.com/wcharczuk/go-chart"
@@ -32,7 +30,6 @@ func calculateTimePeriod(from, to string) (time.Time, time.Time, time.Duration) 
 		t, terr := time.ParseDuration(to)
 		if terr != nil {
 			log.Print("[WARN] dashboard: can't parse to field")
-			//	TODO write a warning about being unable to parse to field
 			//	TODO handle negative duration
 		}
 		toTime = toTime.Add(-t)
@@ -41,22 +38,15 @@ func calculateTimePeriod(from, to string) (time.Time, time.Time, time.Duration) 
 }
 
 // loadCandles loads candles for given period of time aggregated by given duration
-func loadCandles(from time.Time, to time.Time, duration time.Duration) ([]store.Candle, error) {
-	var result []store.Candle
-	candleGetURL := fmt.Sprintf("%v/api/candle?from=%v&to=%v&aggregate=%v",
-		apiClient.apiURL,
-		url.QueryEscape(from.Format(time.RFC3339)),
-		url.QueryEscape(to.Format(time.RFC3339)),
-		duration)
-	r, err := apiClient.httpClient.Get(candleGetURL)
+func loadCandles(engine store.Engine, from time.Time, to time.Time, duration time.Duration) ([]store.Candle, error) {
+	candles, err := engine.Load(from, to)
 	if err != nil {
 		return nil, err
 	}
-	err = json.NewDecoder(r.Body).Decode(&result)
-	if err != nil {
-		return nil, err
+	if duration != time.Minute {
+		candles = aggregateCandles(candles, duration)
 	}
-	return result, r.Body.Close()
+	return candles, nil
 }
 
 // prepareSeries require candles and request duration\step data and returns

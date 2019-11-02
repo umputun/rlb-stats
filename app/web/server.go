@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -17,48 +18,56 @@ import (
 	"github.com/umputun/rlb-stats/app/store"
 )
 
-// Server is a UI for rlb-stats rest backend
+// Server is a web-server for rlb-stats REST API and UI
 type Server struct {
-	address string // set only in tests
-	Port    int
-	APIPort int
+	Engine       store.Engine
+	Port         int
+	Version      string
+	address      string // set only in tests
+	webappPrefix string // set only in tests
 }
 
-// Global anonymous struct, is it bad?
-var apiClient struct {
-	apiURL     string
-	httpClient *http.Client
-}
+// JSON is a map alias, just for convenience
+type JSON map[string]interface{}
 
 // Run starts a web-server
 func (s *Server) Run() {
-	log.Printf("[INFO] activate UI web server on port %v", s.Port)
+	log.Printf("[INFO] activate web server on port %v", s.Port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("%v:%v", s.address, s.Port), s.routes()))
 }
 
 func (s *Server) routes() chi.Router {
-	apiClient.apiURL = fmt.Sprintf("http://localhost:%v", s.APIPort)
-	apiClient.httpClient = &http.Client{Timeout: 60 * time.Second}
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger, middleware.Recoverer)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(tollbooth_chi.LimitHandler(tollbooth.NewLimiter(10, nil)))
+	r.Use(appInfo("rlb-stats", s.Version), Ping)
 
-	r.Get("/", getDashboard)
-	r.Get("/file_stats", getFileStats)
-	r.Get("/chart", drawChart)
+	r.Get("/", s.getDashboard)
+	r.Get("/file_stats", s.getFileStats)
+	r.Get("/chart", s.drawChart)
+
+	r.Route("/api", func(r chi.Router) {
+		r.Get("/candle", s.getCandle)
+	})
 
 	return r
 }
 
+func sendErrorJSON(w http.ResponseWriter, r *http.Request, code int, err error, details string) {
+	log.Printf("[WARN] %s", details)
+	render.Status(r, code)
+	render.JSON(w, r, JSON{"error": err.Error(), "details": details})
+}
+
 // GET /
-func getDashboard(w http.ResponseWriter, r *http.Request) {
+func (s Server) getDashboard(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 	fromTime, toTime, aggDuration := calculateTimePeriod(from, to)
-	candles, err := loadCandles(fromTime, toTime, aggDuration)
+	candles, err := loadCandles(s.Engine, fromTime, toTime, aggDuration)
 	if err != nil {
 		log.Printf("[WARN] /: unable to load candles: %v", err)
 		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusInternalServerError)
@@ -76,7 +85,7 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 		to,
 	}
 
-	t := template.Must(template.ParseFiles("webapp/dashboard.html.tpl"))
+	t := template.Must(template.ParseFiles(fmt.Sprintf("%vwebapp/dashboard.html.tpl", s.webappPrefix)))
 	err = t.Execute(w, result)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("unable to execute template: %v", err), http.StatusInternalServerError)
@@ -87,7 +96,7 @@ func getDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 // GET /file_stats
-func getFileStats(w http.ResponseWriter, r *http.Request) {
+func (s Server) getFileStats(w http.ResponseWriter, r *http.Request) {
 	filename := r.URL.Query().Get("filename")
 	if filename == "" {
 		http.Error(w, fmt.Sprint("'filename' parameter is required"), http.StatusUnprocessableEntity)
@@ -96,7 +105,7 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 	fromTime, toTime, aggDuration := calculateTimePeriod(from, to)
-	candles, err := loadCandles(fromTime, toTime, aggDuration)
+	candles, err := loadCandles(s.Engine, fromTime, toTime, aggDuration)
 	if err != nil {
 		log.Printf("[WARN] /file_stats: unable to load candles: %v", err)
 		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusInternalServerError)
@@ -114,7 +123,7 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 		to,
 	}
 
-	t := template.Must(template.ParseFiles("webapp/file_stats.html.tpl"))
+	t := template.Must(template.ParseFiles(fmt.Sprintf("%vwebapp/file_stats.html.tpl", s.webappPrefix)))
 	err = t.Execute(w, result)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("unable to execute template: %v", err), http.StatusInternalServerError)
@@ -125,12 +134,12 @@ func getFileStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // GET /chart
-func drawChart(w http.ResponseWriter, r *http.Request) {
+func (s Server) drawChart(w http.ResponseWriter, r *http.Request) {
 	fromTime, toTime, aggDuration := calculateTimePeriod(
 		r.URL.Query().Get("from"),
 		r.URL.Query().Get("to"),
 	)
-	candles, err := loadCandles(fromTime, toTime, aggDuration)
+	candles, err := loadCandles(s.Engine, fromTime, toTime, aggDuration)
 	if err != nil {
 		log.Printf("[WARN] dashboard: unable to load candles: %v", err)
 		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusInternalServerError)
@@ -168,4 +177,42 @@ func drawChart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("unable to render graph: %v", err), http.StatusBadRequest)
 		log.Printf("[WARN] dashboard: unable to render graph: %v", err)
 	}
+}
+
+// GET /api/candle
+func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
+	from := r.URL.Query().Get("from")
+	if from == "" {
+		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("no 'from' field passed"), "")
+		return
+	}
+	fromTime, err := time.Parse(time.RFC3339, from)
+	if err != nil {
+		sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'from' field")
+		return
+	}
+	toTime := time.Now()
+	if to := r.URL.Query().Get("to"); to != "" {
+		t, terr := time.Parse(time.RFC3339, to)
+		if terr != nil {
+			sendErrorJSON(w, r, http.StatusExpectationFailed, terr, "can't parse 'to' field")
+			return
+		}
+		toTime = t
+	}
+	duration := time.Minute
+	if a := r.URL.Query().Get("aggregate"); a != "" {
+		duration, err = time.ParseDuration(a)
+		if err != nil {
+			sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'aggregate' field")
+			return
+		}
+	}
+	candles, err := loadCandles(s.Engine, fromTime, toTime, duration)
+	if err != nil {
+		sendErrorJSON(w, r, http.StatusBadRequest, err, "can't load candles")
+		return
+	}
+	render.Status(r, http.StatusOK)
+	render.JSON(w, r, candles)
 }

@@ -1,9 +1,9 @@
 package web
 
 import (
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
+	"errors"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -49,49 +49,60 @@ func TestSeriesGeneration(t *testing.T) {
 	}
 }
 
-func TestLoadCandlesEmptyResponse(t *testing.T) {
-	// Start a local HTTP server with valid response
-	goodServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		// Test request parameters
-		assert.Equal(t, "/api/candle?from=0001-01-01T00%3A00%3A00Z&to=0001-01-01T00%3A01%3A00Z&aggregate=1ns", r.URL.String())
-		assert.Equal(t, "0001-01-01T00:00:00Z", r.URL.Query().Get("from"))
-		assert.Equal(t, "0001-01-01T00:01:00Z", r.URL.Query().Get("to"))
-		// Send response to be tested
-		_, err := rw.Write([]byte(`[]`))
-		assert.Nil(t, err)
-	}))
-	// Close the server when test finishes
-	defer goodServer.Close()
-
-	apiClient.apiURL = goodServer.URL
-	apiClient.httpClient = goodServer.Client()
+func TestLoadCandles(t *testing.T) {
+	e, teardown := startupEngine(t, false)
+	defer teardown()
 
 	// load empty results
-	result, err := loadCandles(time.Time{}, time.Time{}.Add(time.Minute), time.Nanosecond)
-	assert.Equal(t, []store.Candle{}, result)
+	result, err := loadCandles(e, time.Time{}, time.Time{}.Add(time.Minute), time.Nanosecond)
 	assert.Nil(t, err)
+	assert.Equal(t, []store.Candle{}, result)
+
+	// load non-empty results
+	result, err = loadCandles(e, time.Unix(0, 0), time.Unix(0, 0).Add(time.Minute), time.Nanosecond)
+	assert.Nil(t, err)
+	assert.Equal(t, []store.Candle{storedCandle}, result)
+
+	badE, _ := startupEngine(t, true)
+	// load from non-existent files
+	result, err = loadCandles(badE, time.Unix(0, 0), time.Unix(0, 0).Add(time.Minute), time.Nanosecond)
+	assert.Nil(t, result)
+	assert.EqualError(t, err, "test error")
 }
 
-func TestLoadCandlesBadResponse(t *testing.T) {
-	// Start a local HTTP server with valid response
-	badServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		// Send response to be tested
-		_, err := rw.Write([]byte(`{}`))
-		assert.Nil(t, err)
-	}))
-	// Close the server when test finishes
-	defer badServer.Close()
+var storedCandle = store.Candle{
+	Nodes: map[string]store.Info{
+		"n6.radio-t.com": {Volume: 1, MinAnswerTime: time.Second * 3, MeanAnswerTime: time.Second * 3, MaxAnswerTime: time.Second * 3, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
+		"all":            {Volume: 1, MinAnswerTime: time.Second * 3, MeanAnswerTime: time.Second * 3, MaxAnswerTime: time.Second * 3, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
+	},
+	StartMinute: time.Unix(0, 0),
+}
 
-	apiClient.apiURL = badServer.URL
-	apiClient.httpClient = badServer.Client()
+func startupEngine(t *testing.T, badEngine bool) (engine store.Engine, teardown func()) {
+	if badEngine {
+		return MockDB{}, func() {}
+	}
+	file, err := ioutil.TempFile("/tmp/", "bolt_test.bd.")
+	assert.Nil(t, err, "created temp file")
+	engine, err = store.NewBolt(file.Name())
+	assert.Nil(t, err, "engine created")
+	assert.Nil(t, engine.Save(storedCandle), "saved fine")
 
-	// load wrong JSON response
-	result, err := loadCandles(time.Time{}, time.Time{}.Add(time.Minute), time.Nanosecond)
-	assert.Equal(t, []store.Candle(nil), result)
-	assert.IsType(t, &json.UnmarshalTypeError{}, err)
+	teardown = func() {
+		_ = os.Remove(file.Name())
+	}
 
-	// try to load from empty URL
-	apiClient.apiURL = ""
-	_, err = loadCandles(time.Time{}, time.Time{}.Add(time.Minute), time.Nanosecond)
-	assert.NotNil(t, err)
+	return engine, teardown
+}
+
+// MockDB implements store.Engine
+type MockDB struct {
+}
+
+func (m MockDB) Save(candle store.Candle) error {
+	return errors.New("test error")
+}
+
+func (m MockDB) Load(periodStart, periodEnd time.Time) ([]store.Candle, error) {
+	return nil, errors.New("test error")
 }

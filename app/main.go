@@ -6,7 +6,6 @@ import (
 
 	"github.com/jessevdk/go-flags"
 
-	"github.com/umputun/rlb-stats/app/api"
 	"github.com/umputun/rlb-stats/app/logservice"
 	"github.com/umputun/rlb-stats/app/store"
 	"github.com/umputun/rlb-stats/app/web"
@@ -14,8 +13,7 @@ import (
 
 var opts struct {
 	BoltDB        string `long:"bolt" env:"BOLT_FILE" default:"/tmp/rlb-stats.bd" description:"boltdb file path"`
-	Port          int    `long:"port" env:"PORT" default:"8080" description:"REST server port"`
-	UIPort        int    `long:"ui_port" env:"UI_PORT" default:"80" description:"UI server port"`
+	Port          int    `long:"port" env:"PORT" default:"80" description:"Web server port"`
 	ContainerName string `long:"container_name" env:"CONTAINER_NAME" default:"" description:"container name"`
 	DockerHost    string `long:"docker" env:"DOCKER_HOST" default:"unix:///var/run/docker.sock" description:"docker host"`
 	LogTail       string `long:"log_tail" env:"LOG_TAIL" default:"1000" description:"how many log entries to load from container, set to 'all' on the first run"`
@@ -48,17 +46,12 @@ func main() {
 		}
 		logServ.Go()
 	}
-	restServ := api.Server{
+	webServer := web.Server{
 		Engine:  storage,
 		Port:    opts.Port,
 		Version: revision,
 	}
-	uiServer := web.Server{
-		Port:    opts.UIPort,
-		APIPort: opts.Port,
-	}
-	go restServ.Run()
-	uiServer.Run()
+	webServer.Run()
 }
 
 func getEngine(boltFile string) store.Engine {
