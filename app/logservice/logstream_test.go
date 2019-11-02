@@ -11,11 +11,11 @@ import (
 )
 
 func TestLogExtraction(t *testing.T) {
-	const regEx = `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$`
+	const regEx = `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<FromIP>.+) - (?:.+) - (?:.+) - https?://(?P<DestHost>.+?)/.+$`
 	const defaultDateFormat = `2006/01/02 15:04:05`
 	parser, _ := newParser(regEx, defaultDateFormat)
 	lineExtractor := newLineExtractor()
-	var entries []store.LogEntry
+	var entries []store.LogRecord
 
 	go func() {
 		_, err := lineExtractor.Write([]byte(fmt.Sprint("2017/09/17 12:54:54.095329 - GET - /api/v1/jump/fil")))
@@ -33,14 +33,13 @@ func TestLogExtraction(t *testing.T) {
 		entries = append(entries, entry)
 	}
 
-	entryParsed := store.LogEntry{
-		SourceIP:        "213.87.120.120",
-		FileName:        "/api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3",
-		DestinationNode: "n6.radio-t.com",
-		AnswerTime:      time.Nanosecond * 710679,
-		Date:            time.Date(2017, 9, 17, 12, 54, 54, 95329000, time.Local),
+	entryParsed := store.LogRecord{
+		FromIP:   "213.87.120.120",
+		FileName: "/api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3",
+		DestHost: "n6.radio-t.com",
+		Date:     time.Date(2017, 9, 17, 12, 54, 54, 95329000, time.Local),
 	}
-	entriesParsed := []store.LogEntry{entryParsed, entryParsed, entryParsed}
+	entriesParsed := []store.LogRecord{entryParsed, entryParsed, entryParsed}
 	assert.Equal(t, entriesParsed, entries, "entries parsed")
 
 	// check what LogStreamer.Go is able to be run

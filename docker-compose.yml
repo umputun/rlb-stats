@@ -25,6 +25,6 @@ services:
     # these regexp and and container_name allow to watch for it's own logs and show information from them
     # which is useful for test purposes
 #    environment:
-#    - REGEXP=^(?P<Date>.+) "GET https?://(?P<DestinationNode>.+?)(?P<FileName>/[^?]+)(?:\?.*) HTTP/1.1" from (?P<SourceIP>.+):\d+ - (?:.+) in (?P<AnswerTime>.+)$$
+#    - REGEXP=^(?P<Date>.+) "GET https?://(?P<DestHost>.+?)(?P<FileName>/[^?]+)(?:\?.*) HTTP/1.1" from (?P<FromIP>.+):\d+ - (?:.+) in (?:.+)$$
 #    - CONTAINER_NAME=rlb-stats
 #    - LOG_TAIL=all

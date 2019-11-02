@@ -22,7 +22,7 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
 | container_name | CONTAINER_NAME |                               | container name, _required_ for data collection |
 | docker         | DOCKER_HOST    | `unix:///var/run/docker.sock` | docker host                     |
 | log_tail       | LOG_TAIL       | `1000`                        | how many log entries to load from container |
-| regexp         | REGEXP         | `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$` | log line regexp |
+| regexp         | REGEXP         | `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<FromIP>.+) - (?:.+) - (?:.+) - https?://(?P<DestHost>.+?)/.+$` | log line regexp |
 | date_format    | DATE_FORMAT    | `2006/01/02 15:04:05`         | format of the date in log line  |
 | port           | PORT           | `80`                          | Web server port                |
 | bolt           | BOLT_FILE      | `/tmp/rlb-stats.bd`           | boltdb file path                |
@@ -33,11 +33,10 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
 
 1. Uncomment `environment` section and `user` line in `docker-compose.yml`: it will result in container listening to it's own HTTP access logs
 1. Run `docker-compose up -d` in order to start rlb-stats
-1. API: Open [http://127.0.0.1:8080/api/candle](http://127.0.0.1:8080/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m)
+1. API: Open [http://127.0.0.1/api/candle](http://127.0.0.1/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m)
 endpoint from example below to see all aggregated logs since the start of the container
 (would empty for a minute after you open this page for a first time)
 1. Dashboard: Open http://127.0.0.1/?from=20m URL to see dashboard with statistics
-
 
 ## API
 
@@ -57,7 +56,7 @@ endpoint from example below to see all aggregated logs since the start of the co
 <summary>api/candle</summary>
 
 ```json
-$ http GET http://127.0.0.1:8080/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m
+$ http GET http://127.0.0.1/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m
 
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -67,27 +66,18 @@ Content-Type: application/json
     "Nodes": {
       "n6.radio-t.com": {
         "Volume": 1,
-        "MinAnswerTime": 1,
-        "MeanAnswerTime": 1,
-        "MaxAnswerTime": 1,
         "Files": {
           "rt_podcast585.mp3": 1
         }
       },
       "n7.radio-t.com": {
         "Volume": 1,
-        "MinAnswerTime": 2,
-        "MeanAnswerTime": 2,
-        "MaxAnswerTime": 2,
         "Files": {
           "rt_podcast584.mp3": 1,
         }
       },
       "all": {
         "Volume": 2,
-        "MinAnswerTime": 1,
-        "MeanAnswerTime": 1.5,
-        "MaxAnswerTime": 2,
         "Files": {
           "rt_podcast584.mp3": 1,
           "rt_podcast585.mp3": 1
@@ -100,9 +90,6 @@ Content-Type: application/json
     "Nodes": {
       "n6.radio-t.com": {
         "Volume": 5,
-        "MinAnswerTime": 1,
-        "MeanAnswerTime": 1,
-        "MaxAnswerTime": 1,
         "Files": {
           "rt_podcast579.mp3": 1,
           "rt_podcast581.mp3": 1,
@@ -113,9 +100,6 @@ Content-Type: application/json
       },
       "all": {
         "Volume": 5,
-        "MinAnswerTime": 1,
-        "MeanAnswerTime": 1,
-        "MaxAnswerTime": 1,
         "Files": {
           "rt_podcast579.mp3": 1,
           "rt_podcast581.mp3": 1,

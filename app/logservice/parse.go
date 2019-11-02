@@ -14,7 +14,7 @@ import (
 type Parser struct {
 	pattern    *regexp.Regexp
 	dateFormat string
-	entries    []store.LogEntry // used to store entries which are not yet dumped into candles
+	entries    []store.LogRecord // used to store entries which are not yet dumped into candles
 }
 
 // NewLogService checks if regular expression valid
@@ -33,7 +33,7 @@ func newParser(regEx string, dateFormat string) (parser *Parser, err error) {
 // validate regex to make sure it contain right named fields
 func (p *Parser) validate() (err error) {
 	names := p.pattern.SubexpNames()
-	for _, name := range []string{"SourceIP", "FileName", "DestinationNode", "AnswerTime", "Date"} {
+	for _, name := range []string{"FromIP", "FileName", "DestHost", "Date"} {
 		if !contains(name, names) {
 			log.Printf("[ERROR] '%v' field absent in regexp", name)
 			err = fmt.Errorf("'%v' missing regexp fields", p.pattern)
@@ -42,8 +42,8 @@ func (p *Parser) validate() (err error) {
 	return err
 }
 
-// Do parse log line into LogEntry
-func (p *Parser) Do(line string) (entry store.LogEntry, err error) {
+// Do parse log line into LogRecord
+func (p *Parser) Do(line string) (entry store.LogRecord, err error) {
 	result := p.pattern.FindStringSubmatch(line)
 	if result == nil {
 		return entry, errors.New("can't match line against given regEx")
@@ -52,14 +52,12 @@ func (p *Parser) Do(line string) (entry store.LogEntry, err error) {
 	for i, m := range result {
 		switch n[i] {
 		case "": // first result is full string which is unnamed, do nothing with it
-		case "SourceIP":
-			entry.SourceIP = m
+		case "FromIP":
+			entry.FromIP = m
 		case "FileName":
 			entry.FileName = m
-		case "DestinationNode":
-			entry.DestinationNode = m
-		case "AnswerTime":
-			entry.AnswerTime, err = time.ParseDuration(m)
+		case "DestHost":
+			entry.DestHost = m
 		case "Date":
 			entry.Date, err = time.ParseInLocation(p.dateFormat, m, time.Local)
 		}
@@ -70,8 +68,8 @@ func (p *Parser) Do(line string) (entry store.LogEntry, err error) {
 	return entry, err
 }
 
-// Submit store LogEntry and return Candle when minute change
-func (p *Parser) submit(newEntry store.LogEntry) (store.Candle, bool) {
+// Submit store LogRecord and return Candle when minute change
+func (p *Parser) submit(newEntry store.LogRecord) (store.Candle, bool) {
 	minuteCandle := store.Candle{}
 	ok := false
 	// drop seconds and nanoseconds from log date
@@ -89,14 +87,14 @@ func (p *Parser) submit(newEntry store.LogEntry) (store.Candle, bool) {
 		minuteCandle = store.NewCandle()            // then all previous entries have same date precise to the minute and will be written to single candle
 		var deduplicate = make(map[string]struct{}) // deduplicate store ip-file map
 		for _, entry := range p.entries {
-			_, duplicate := deduplicate[fmt.Sprintf("%s-%s", entry.FileName, entry.SourceIP)]
+			_, duplicate := deduplicate[fmt.Sprintf("%s-%s", entry.FileName, entry.FromIP)]
 			if !duplicate {
 				minuteCandle.Update(entry)
-				deduplicate[fmt.Sprintf("%s-%s", entry.FileName, entry.SourceIP)] = struct{}{}
+				deduplicate[fmt.Sprintf("%s-%s", entry.FileName, entry.FromIP)] = struct{}{}
 			}
 		}
-		ok = true                      // candle is ready to be written
-		p.entries = []store.LogEntry{} // clean written entries
+		ok = true                       // candle is ready to be written
+		p.entries = []store.LogRecord{} // clean written entries
 	}
 	p.entries = append(p.entries, newEntry)
 

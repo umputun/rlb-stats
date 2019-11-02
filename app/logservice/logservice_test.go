@@ -13,7 +13,7 @@ import (
 )
 
 func TestLogService(t *testing.T) {
-	const regEx = `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$`
+	const regEx = `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<FromIP>.+) - (?:.+) - (?:.+) - https?://(?P<DestHost>.+?)/.+$`
 	const defaultDateFormat = `2006/01/02 15:04:05`
 	s, err := store.NewBolt("/tmp/test.bd")
 	assert.Nil(t, err, "engine created")

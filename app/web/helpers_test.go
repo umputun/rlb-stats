@@ -72,8 +72,8 @@ func TestLoadCandles(t *testing.T) {
 
 var storedCandle = store.Candle{
 	Nodes: map[string]store.Info{
-		"n6.radio-t.com": {Volume: 1, MinAnswerTime: time.Second * 3, MeanAnswerTime: time.Second * 3, MaxAnswerTime: time.Second * 3, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
-		"all":            {Volume: 1, MinAnswerTime: time.Second * 3, MeanAnswerTime: time.Second * 3, MaxAnswerTime: time.Second * 3, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
+		"n6.radio-t.com": {Volume: 1, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
+		"all":            {Volume: 1, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
 	},
 	StartMinute: time.Unix(0, 0),
 }

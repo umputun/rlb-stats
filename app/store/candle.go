@@ -12,44 +12,24 @@ type Candle struct {
 
 // Info contain single node download statistics
 type Info struct {
-	Volume         int
-	MinAnswerTime  time.Duration
-	MeanAnswerTime time.Duration
-	MaxAnswerTime  time.Duration
-	Files          map[string]int
+	Volume int
+	Files  map[string]int
 }
 
 // NewInfo create empty node information
 func NewInfo() Info {
 	return Info{
-		Volume:         0,
-		MinAnswerTime:  time.Hour,
-		MeanAnswerTime: time.Duration(0),
-		MaxAnswerTime:  time.Duration(0),
-		Files:          map[string]int{},
+		Volume: 0,
+		Files:  map[string]int{},
 	}
 }
 
-// LogEntry contains meaningful data extracted from single log line
-type LogEntry struct {
-	SourceIP        string
-	FileName        string
-	DestinationNode string
-	AnswerTime      time.Duration
-	Date            time.Time
-}
-
-// update single node information
-func (n *Info) update(l LogEntry) {
-	if n.MinAnswerTime > l.AnswerTime {
-		n.MinAnswerTime = l.AnswerTime
-	}
-	n.MeanAnswerTime = (n.MeanAnswerTime*time.Duration(n.Volume) + l.AnswerTime) / time.Duration(n.Volume+1)
-	if n.MaxAnswerTime < l.AnswerTime {
-		n.MaxAnswerTime = l.AnswerTime
-	}
-	n.Files[l.FileName]++
-	n.Volume++
+// LogRecord contains meaningful subset of data from rlb LogRecord
+type LogRecord struct {
+	FromIP   string    `json:"from_ip"`
+	FileName string    `json:"file_name"`
+	DestHost string    `json:"dest"`
+	Date     time.Time `json:"ts"`
 }
 
 // NewCandle create empty candle
@@ -60,13 +40,14 @@ func NewCandle() (c Candle) {
 }
 
 // Update log destination node and add same stats to "all" node
-func (c *Candle) Update(l LogEntry) {
-	for _, nodeName := range []string{l.DestinationNode, "all"} {
+func (c *Candle) Update(l LogRecord) {
+	for _, nodeName := range []string{l.DestHost, "all"} {
 		node, ok := c.Nodes[nodeName]
 		if !ok {
 			node = NewInfo()
 		}
-		node.update(l)
+		node.Files[l.FileName]++
+		node.Volume++
 		c.Nodes[nodeName] = node
 	}
 	c.StartMinute = l.Date

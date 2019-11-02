@@ -48,15 +48,6 @@ func updateCandleAndDiscardTime(source store.Candle, appendix store.Candle) stor
 		if !ok {
 			m = store.NewInfo()
 		}
-		// to calculate mean time multiply source and appendix by their volume and divide everything by total volume
-		m.MeanAnswerTime = (m.MeanAnswerTime*time.Duration(m.Volume) + appendix.Nodes[n].MeanAnswerTime*time.Duration(appendix.Nodes[n].Volume)) /
-			time.Duration(m.Volume+appendix.Nodes[n].Volume)
-		if m.MinAnswerTime > appendix.Nodes[n].MinAnswerTime {
-			m.MinAnswerTime = appendix.Nodes[n].MinAnswerTime
-		}
-		if m.MaxAnswerTime < appendix.Nodes[n].MaxAnswerTime {
-			m.MaxAnswerTime = appendix.Nodes[n].MaxAnswerTime
-		}
 		for file := range appendix.Nodes[n].Files {
 			m.Files[file] += appendix.Nodes[n].Files[file]
 		}
