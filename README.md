@@ -24,7 +24,7 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
 | log_tail       | LOG_TAIL       | `1000`                        | how many log entries to load from container |
 | regexp         | REGEXP         | `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<SourceIP>.+) - (?:.+) - (?P<AnswerTime>.+) - https?://(?P<DestinationNode>.+?)/.+$` | log line regexp |
 | date_format    | DATE_FORMAT    | `2006/01/02 15:04:05`         | format of the date in log line  |
-| ui_port        | UI_PORT        | `8000`                        | UI server port                  |
+| ui_port        | UI_PORT        | `80`                          | UI server port                  |
 | port           | PORT           | `8080`                        | REST server port                |
 | bolt           | BOLT_FILE      | `/tmp/rlb-stats.bd`           | boltdb file path                |
 | dbg            | DEBUG          | `false`                       | debug mode                      |
@@ -37,7 +37,7 @@ Use `docker-compose.yml` as an example for service start, minimum requirements:
 1. API: Open [http://127.0.0.1:8080/api/candle](http://127.0.0.1:8080/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m)
 endpoint from example below to see all aggregated logs since the start of the container
 (would empty for a minute after you open this page for a first time)
-1. Dashboard: Open http://127.0.0.1:8000/?from=20m URL to see dashboard with statistics
+1. Dashboard: Open http://127.0.0.1/?from=20m URL to see dashboard with statistics
 
 
 ## API
