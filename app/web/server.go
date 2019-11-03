@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -15,12 +16,14 @@ import (
 	"github.com/go-chi/render"
 	"github.com/wcharczuk/go-chart"
 
+	"github.com/umputun/rlb-stats/app/logservice"
 	"github.com/umputun/rlb-stats/app/store"
 )
 
 // Server is a web-server for rlb-stats REST API and UI
 type Server struct {
 	Engine       store.Engine
+	Parser       *logservice.Parser
 	Port         int
 	Version      string
 	address      string // set only in tests
@@ -51,6 +54,7 @@ func (s *Server) routes() chi.Router {
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/candle", s.getCandle)
+		r.Post("/insert", s.insert)
 	})
 
 	return r
@@ -215,4 +219,22 @@ func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	}
 	render.Status(r, http.StatusOK)
 	render.JSON(w, r, candles)
+}
+
+// POST /api/insert
+func (s Server) insert(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var l store.LogRecord
+	err := decoder.Decode(&l)
+	if err != nil {
+		sendErrorJSON(w, r, http.StatusBadRequest, err, "Problem decoding JSON")
+		return
+	}
+	err = saveLogRecord(s.Engine, s.Parser, l)
+	if err != nil {
+		sendErrorJSON(w, r, http.StatusInternalServerError, err, "Problem saving LogRecord")
+		return
+	}
+
+	render.JSON(w, r, struct{ result string }{"ok"})
 }

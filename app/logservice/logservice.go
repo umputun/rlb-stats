@@ -21,15 +21,15 @@ type LogService struct {
 // Go starts LogService
 func (l *LogService) Go() {
 	log.Printf("[INFO] get %v loglines from container %v and listen for new ones", l.LogTail, l.ContainerName)
-	parser := getParser(l.RegEx, l.DateFormat)
+	parser := GetParser(l.RegEx, l.DateFormat)
 	dockerClient := getDocker(l.DockerHost)
 	logExtractor := newLineExtractor()
 	logStreamer := getLogStreamer(dockerClient, l.ContainerName, l.LogTail, logExtractor)
 	startLogStreamer(logStreamer, parser, logExtractor, l.Engine)
 }
 
-// getParser create and validates parser
-func getParser(regEx string, dateFormat string) *Parser {
+// GetParser create and validates parser
+func GetParser(regEx string, dateFormat string) *Parser {
 	parser, err := newParser(regEx, dateFormat)
 	if err != nil {
 		log.Fatalf("[ERROR] can't validate regex, %v", err)
@@ -68,12 +68,12 @@ func getLogStreamer(d *docker.Client, containerName string, tailOption string, l
 
 func startLogStreamer(ls logStreamer, p *Parser, le *lineExtractor, storage store.Engine) {
 
-	ls.Go() // start listening to container logs
+	ls.Go()     // start listening to container logs
 	go func() { // start parser on logs
 		for line := range le.Ch() {
 			entry, err := p.Do(line)
 			if err == nil {
-				if candle, ok := p.submit(entry); ok { // Submit returns ok in case candle is ready
+				if candle, ok := p.Submit(entry); ok { // Submit returns ok in case candle is ready
 					err = storage.Save(candle)
 					if err != nil {
 						log.Printf("[ERROR] couldn't write candle to storage, %v", err)

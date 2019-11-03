@@ -39,6 +39,6 @@ func TestLogService(t *testing.T) {
 	logExtractor := newLineExtractor()
 	assert.Panics(t, func() { getLogStreamer(&docker.Client{}, l.ContainerName, l.LogTail, logExtractor) }, "memory problem because of pointer to nothing")
 
-	parser := getParser(l.RegEx, l.DateFormat)
+	parser := GetParser(l.RegEx, l.DateFormat)
 	startLogStreamer(logStreamer{}, parser, logExtractor, l.Engine)
 }

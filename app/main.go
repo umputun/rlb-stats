@@ -46,8 +46,10 @@ func main() {
 		}
 		logServ.Go()
 	}
+	parser := logservice.GetParser(opts.RegEx, opts.DateFormat)
 	webServer := web.Server{
 		Engine:  storage,
+		Parser:  parser,
 		Port:    opts.Port,
 		Version: revision,
 	}

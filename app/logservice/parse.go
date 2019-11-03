@@ -69,7 +69,7 @@ func (p *Parser) Do(line string) (entry store.LogRecord, err error) {
 }
 
 // Submit store LogRecord and return Candle when minute change
-func (p *Parser) submit(newEntry store.LogRecord) (store.Candle, bool) {
+func (p *Parser) Submit(newEntry store.LogRecord) (store.Candle, bool) {
 	minuteCandle := store.Candle{}
 	ok := false
 	// drop seconds and nanoseconds from log date

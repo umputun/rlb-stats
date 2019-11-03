@@ -109,7 +109,7 @@ func TestParsing(t *testing.T) {
 
 	// test LogRecord conversion to Candle
 	for _, testPair := range testsTable {
-		resultCandle, ok := parser.submit(testPair.in)
+		resultCandle, ok := parser.Submit(testPair.in)
 		assert.EqualValues(t, testPair.out, resultCandle, "candle match with expected output")
 		assert.EqualValues(t, testPair.dumped, ok, "entry (not) dumped")
 	}
