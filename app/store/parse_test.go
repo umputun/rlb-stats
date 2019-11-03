@@ -1,65 +1,63 @@
-package logservice
+package store
 
 import (
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/umputun/rlb-stats/app/store"
 )
 
 var testsTable = []struct {
-	in     store.LogRecord
-	out    store.Candle
+	in     LogRecord
+	out    Candle
 	dumped bool
 }{
-	{store.LogRecord{
+	{LogRecord{
 		FromIP:   "127.0.0.1", // access to first file
 		FileName: "/rtfiles/rt_podcast561.mp3",
 		DestHost: "n6.radio-t.com",
 		Date:     time.Time{},
 	},
-		store.Candle{}, // empty, not yet dumped
+		Candle{}, // empty, not yet dumped
 		false},
-	{store.LogRecord{
+	{LogRecord{
 		FromIP:   "127.0.0.1", // access to second file
 		FileName: "/rtfiles/rt_podcast562.mp3",
 		DestHost: "n6.radio-t.com",
 		Date:     time.Time{},
 	},
-		store.Candle{}, // empty, not yet dumped
+		Candle{}, // empty, not yet dumped
 		false},
-	{store.LogRecord{
+	{LogRecord{
 		FromIP:   "127.0.0.1", // access to first file, other node
 		FileName: "/rtfiles/rt_podcast561.mp3",
 		DestHost: "n7.radio-t.com",
 		Date:     time.Time{},
 	},
-		store.Candle{}, // empty, not yet dumped
+		Candle{}, // empty, not yet dumped
 		false},
-	{store.LogRecord{
+	{LogRecord{
 		FromIP:   "127.0.0.1", // access to first file, other minute
 		FileName: "/rtfiles/rt_podcast561.mp3",
 		DestHost: "n7.radio-t.com",
 		Date:     time.Time{}.Add(time.Minute),
 	},
-		store.Candle{ // from first 3 entries
-			Nodes: map[string]store.Info{
+		Candle{ // from first 3 entries
+			Nodes: map[string]Info{
 				"n6.radio-t.com": {Volume: 2, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1, "/rtfiles/rt_podcast562.mp3": 1}},
 				"all":            {Volume: 2, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1, "/rtfiles/rt_podcast562.mp3": 1}},
 			},
 			StartMinute: time.Time{},
 		},
 		true},
-	{store.LogRecord{
+	{LogRecord{
 		FromIP:   "127.0.0.1", // access in third minute, will not be flushed into resultCandle
 		FileName: "/rtfiles/rt_podcast561.mp3",
 		DestHost: "n7.radio-t.com",
 		Date:     time.Time{}.Add(time.Minute * 2),
 	},
-		store.Candle{ // from 4th entry
-			Nodes: map[string]store.Info{
+		Candle{ // from 4th entry
+			Nodes: map[string]Info{
 				"n7.radio-t.com": {Volume: 1, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
 				"all":            {Volume: 1, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
 			},
@@ -85,7 +83,7 @@ func TestParsing(t *testing.T) {
 	entry, err := parser.Do(testString)
 	assert.Nil(t, err, "string parsed")
 
-	entryParsed := store.LogRecord{
+	entryParsed := LogRecord{
 		FromIP:   "213.87.120.120",
 		FileName: "/api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3",
 		DestHost: "n6.radio-t.com",

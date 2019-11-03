@@ -1,4 +1,4 @@
-package logservice
+package store
 
 import (
 	"errors"
@@ -6,15 +6,13 @@ import (
 	"log"
 	"regexp"
 	"time"
-
-	"github.com/umputun/rlb-stats/app/store"
 )
 
 // Parser contain validated regular expression for parsing logs
 type Parser struct {
 	pattern    *regexp.Regexp
 	dateFormat string
-	entries    []store.LogRecord // used to store entries which are not yet dumped into candles
+	entries    []LogRecord // used to store entries which are not yet dumped into candles
 }
 
 // NewLogService checks if regular expression valid
@@ -43,7 +41,7 @@ func (p *Parser) validate() (err error) {
 }
 
 // Do parse log line into LogRecord
-func (p *Parser) Do(line string) (entry store.LogRecord, err error) {
+func (p *Parser) Do(line string) (entry LogRecord, err error) {
 	result := p.pattern.FindStringSubmatch(line)
 	if result == nil {
 		return entry, errors.New("can't match line against given regEx")
@@ -69,8 +67,8 @@ func (p *Parser) Do(line string) (entry store.LogRecord, err error) {
 }
 
 // Submit store LogRecord and return Candle when minute change
-func (p *Parser) Submit(newEntry store.LogRecord) (store.Candle, bool) {
-	minuteCandle := store.Candle{}
+func (p *Parser) Submit(newEntry LogRecord) (Candle, bool) {
+	minuteCandle := Candle{}
 	ok := false
 	// drop seconds and nanoseconds from log date
 	newEntry.Date = time.Date(
@@ -84,7 +82,7 @@ func (p *Parser) Submit(newEntry store.LogRecord) (store.Candle, bool) {
 		newEntry.Date.Location())
 
 	if len(p.entries) > 0 && !newEntry.Date.Equal(p.entries[len(p.entries)-1].Date) { // if there are existing entries and date changed
-		minuteCandle = store.NewCandle()            // then all previous entries have same date precise to the minute and will be written to single candle
+		minuteCandle = NewCandle()                  // then all previous entries have same date precise to the minute and will be written to single candle
 		var deduplicate = make(map[string]struct{}) // deduplicate store ip-file map
 		for _, entry := range p.entries {
 			_, duplicate := deduplicate[fmt.Sprintf("%s-%s", entry.FileName, entry.FromIP)]
@@ -93,8 +91,8 @@ func (p *Parser) Submit(newEntry store.LogRecord) (store.Candle, bool) {
 				deduplicate[fmt.Sprintf("%s-%s", entry.FileName, entry.FromIP)] = struct{}{}
 			}
 		}
-		ok = true                       // candle is ready to be written
-		p.entries = []store.LogRecord{} // clean written entries
+		ok = true                 // candle is ready to be written
+		p.entries = []LogRecord{} // clean written entries
 	}
 	p.entries = append(p.entries, newEntry)
 
