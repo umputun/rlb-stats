@@ -10,19 +10,20 @@ import (
 	"github.com/umputun/rlb-stats/app/store"
 )
 
+const defaultFrom = time.Hour
+
 // calculateTimePeriod waits for from and to time.Duration in human-readable form
 // and returns time.Time in relevance with current time, and 1\10th of this period
 // as time.Duration.
 func calculateTimePeriod(from, to string) (time.Time, time.Time, time.Duration) {
 	if from == "" {
-		from = "168h"
+		from = defaultFrom.String()
 	}
 	fromDuration, err := time.ParseDuration(from)
 	if err != nil {
-		// TODO write a warning about being unable to parse from field
 		// TODO handle negative duration
 		log.Print("[WARN] dashboard: can't parse from field")
-		fromDuration = time.Hour * 24 * 7
+		fromDuration = defaultFrom
 	}
 	fromTime := time.Now().Add(-fromDuration)
 	toTime := time.Now()

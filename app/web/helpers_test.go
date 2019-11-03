@@ -19,10 +19,10 @@ func TestTime(t *testing.T) {
 		fromTime, toTime time.Time
 		fromDuration     time.Duration
 	}{
-		1: {"", "", time.Now().Add(time.Hour * -168), time.Now(), time.Hour * 168 / 10},
+		1: {"", "", time.Now().Add(-defaultFrom), time.Now(), defaultFrom / 10},
 		2: {"10h", "", time.Now().Add(time.Hour * -10), time.Now(), time.Hour * 10 / 10},
 		3: {"168h", "8h", time.Now().Add(time.Hour * -168), time.Now().Add(time.Hour * -8), time.Hour * 160 / 10},
-		4: {"wrong", "wrong", time.Now().Add(time.Hour * -168), time.Now(), time.Hour * 168 / 10},
+		4: {"wrong", "wrong", time.Now().Add(-defaultFrom), time.Now(), defaultFrom / 10},
 	}
 	for i, data := range testSet {
 		fromTime, toTime, fromDuration := calculateTimePeriod(data.from, data.to)
