@@ -7,7 +7,6 @@ import (
 
 	"github.com/wcharczuk/go-chart"
 
-	"github.com/umputun/rlb-stats/app/logservice"
 	"github.com/umputun/rlb-stats/app/store"
 )
 
@@ -51,8 +50,8 @@ func loadCandles(engine store.Engine, from time.Time, to time.Time, duration tim
 }
 
 // saveLogRecord saves a log record to candle
-func saveLogRecord(engine store.Engine, parser *logservice.Parser, l store.LogRecord) error {
-	if candle, ok := parser.Submit(l); ok { // Submit returns ok in case candle is ready
+func saveLogRecord(engine store.Engine, parser *store.Aggregator, l store.LogRecord) error {
+	if candle, ok := parser.Store(l); ok { // Store returns ok in case candle is ready
 		return engine.Save(candle)
 	}
 	return nil

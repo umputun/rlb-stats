@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/umputun/rlb-stats/app/logservice"
 	"github.com/umputun/rlb-stats/app/store"
 )
 
@@ -34,11 +33,11 @@ func TestSendErrorJSON(t *testing.T) {
 
 	resp, err := http.Get(ts.URL + "/error")
 	require.Nil(t, err)
-	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	require.Nil(t, err)
 	assert.Equal(t, 500, resp.StatusCode)
+	assert.NoError(t, resp.Body.Close())
 
 	assert.Equal(t, `{"details":"error details 123456","error":"error 500"}`+"\n", string(body))
 }
@@ -158,7 +157,7 @@ func startupT(t *testing.T, badEngine bool) (ts *httptest.Server, srv *Server, t
 	srv = &Server{
 		address:      "127.0.0.1",
 		Engine:       storage,
-		Parser:       logservice.GetParser("^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<FromIP>.+) - (?:.+) - (?:.+) - https?://(?P<DestHost>.+?)/.+$", ""),
+		Aggregator:   &store.Aggregator{},
 		Port:         9999,
 		Version:      "test_version",
 		webappPrefix: "../../",

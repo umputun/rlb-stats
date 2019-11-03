@@ -67,47 +67,11 @@ var testsTable = []struct {
 }
 
 func TestParsing(t *testing.T) {
-	const testString = `2017/09/17 12:54:54.095329 - GET - /api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3 - 213.87.120.120 - 302 (70) - 710.679µs - http://n6.radio-t.com/rtfiles/rt_podcast561.mp3`
-	const badString = `gabbish`
-	const defaultRegEx = `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<FromIP>.+) - (?:.+) - (?:.+) - https?://(?P<DestHost>.+?)/.+$`
-	const badRegEx = `([`
-	const wrongRegEx = `^(?P<FileName>.+)$`
-	const defaultDateFormat = `2006/01/02 15:04:05`
-	const badDateFormat = `gabbish`
-
-	// normal flow
-	parser, err := newParser(defaultRegEx, defaultDateFormat)
-	assert.Nil(t, err, "parser created")
-	assert.NotNil(t, parser.pattern, "parser pattern is present")
-
-	entry, err := parser.Do(testString)
-	assert.Nil(t, err, "string parsed")
-
-	entryParsed := LogRecord{
-		FromIP:   "213.87.120.120",
-		FileName: "/api/v1/jump/files?url=/rtfiles/rt_podcast561.mp3",
-		DestHost: "n6.radio-t.com",
-		Date:     time.Date(2017, 9, 17, 12, 54, 54, 95329000, time.Local),
-	}
-
-	assert.EqualValues(t, entryParsed, entry, "matches loaded msg")
-
-	// bad cases
-	_, err = parser.Do(badString)
-	assert.NotNil(t, err, "string not parsed")
-
-	parser, err = newParser(defaultRegEx, badDateFormat)
-	assert.Nil(t, err, "parser created")
-	_, err = parser.Do(testString)
-	assert.NotNil(t, err, "string not passed due to bad date")
-	_, err = newParser(badRegEx, defaultDateFormat)
-	assert.NotNil(t, err, "parser failed to be created due to bad regexp")
-	_, err = newParser(wrongRegEx, defaultDateFormat)
-	assert.NotNil(t, err, "parser failed to be created due to missing fields")
+	parser := &Aggregator{}
 
 	// test LogRecord conversion to Candle
 	for _, testPair := range testsTable {
-		resultCandle, ok := parser.Submit(testPair.in)
+		resultCandle, ok := parser.Store(testPair.in)
 		assert.EqualValues(t, testPair.out, resultCandle, "candle match with expected output")
 		assert.EqualValues(t, testPair.dumped, ok, "entry (not) dumped")
 	}

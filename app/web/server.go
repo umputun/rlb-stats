@@ -16,14 +16,13 @@ import (
 	"github.com/go-chi/render"
 	"github.com/wcharczuk/go-chart"
 
-	"github.com/umputun/rlb-stats/app/logservice"
 	"github.com/umputun/rlb-stats/app/store"
 )
 
 // Server is a web-server for rlb-stats REST API and UI
 type Server struct {
 	Engine       store.Engine
-	Parser       *logservice.Parser
+	Aggregator   *store.Aggregator
 	Port         int
 	Version      string
 	address      string // set only in tests
@@ -246,7 +245,7 @@ func (s Server) insert(w http.ResponseWriter, r *http.Request) {
 		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("missing field in JSON"), "from_ip")
 		return
 	}
-	err = saveLogRecord(s.Engine, s.Parser, l)
+	err = saveLogRecord(s.Engine, s.Aggregator, l)
 	if err != nil {
 		sendErrorJSON(w, r, http.StatusInternalServerError, err, "Problem saving LogRecord")
 		return
