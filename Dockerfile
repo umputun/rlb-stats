@@ -35,8 +35,6 @@ FROM umputun/baseimage:app-latest
 RUN apk add --update ca-certificates && update-ca-certificates
 
 COPY --from=build /app/rlb-stats /srv/
-# timezone setter
-COPY init.sh /srv/
 ADD webapp /srv/webapp
 
 RUN chown -R app:app /srv
