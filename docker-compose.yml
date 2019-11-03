@@ -19,12 +19,3 @@ services:
 
     ports:
     - "8080:8080"
-
-    # useful for test purposes if you don't have user 1001 owning /var/run/docker.sock
-#    user: root
-    # these regexp and and container_name allow to watch for it's own logs and show information from them
-    # which is useful for test purposes
-#    environment:
-#    - REGEXP=^(?P<Date>.+) "GET https?://(?P<DestHost>.+?)(?P<FileName>/[^?]+)(?:\?.*) HTTP/1.1" from (?P<FromIP>.+):\d+ - (?:.+) in (?:.+)$$
-#    - CONTAINER_NAME=rlb-stats
-#    - LOG_TAIL=all

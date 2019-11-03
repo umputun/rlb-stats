@@ -4,39 +4,20 @@ Stats collector for [RLB](https://github.com/umputun/rlb) with REST interface an
 
 ## Run instructions
 
-Use `docker-compose.yml` as an example for service start, minimum requirements:
-
- - For web-server work
-     - mount `bolt` data file/folder from host system (`/tmp` in example)
-     - expose a port from container to host system (`8080:8080` in example)
-
-- For data collection
-    - on first run set `log_tail` to `all`
-    - provide `container_name` as an input parameter for docker container
-    - mount `bolt` data file and `docker` socket from host system
+1. Run `docker-compose up` in order to start rlb-stats
+1. API: Open [http://127.0.0.1:8080/api/candle](http://127.0.0.1:8080/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m)
+endpoint from example below to see all aggregated logs since the start of the container
+(would empty for a minute after you open this page for a first time)
+1. Dashboard: Open http://127.0.0.1:8080/?from=20m URL to see dashboard with statistics
 
 ### Application parameters
 
 | Command line   | Environment    | Default                       | Description                     |
 | ---------------| ---------------| ------------------------------| ------------------------------- |
-| container_name | CONTAINER_NAME |                               | container name, _required_ for data collection |
-| docker         | DOCKER_HOST    | `unix:///var/run/docker.sock` | docker host                     |
-| log_tail       | LOG_TAIL       | `1000`                        | how many log entries to load from container |
-| regexp         | REGEXP         | `^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<FromIP>.+) - (?:.+) - (?:.+) - https?://(?P<DestHost>.+?)/.+$` | log line regexp |
-| date_format    | DATE_FORMAT    | `2006/01/02 15:04:05`         | format of the date in log line  |
-| port           | PORT           | `80`                          | Web server port                |
+| port           | PORT           | `80`                          | Web server port                 |
 | bolt           | BOLT_FILE      | `/tmp/rlb-stats.bd`           | boltdb file path                |
 | dbg            | DEBUG          | `false`                       | debug mode                      |
 |                | TIME_ZONE      | `America/Chicago`             | container timezone              |
-
-## How to set up test stand
-
-1. Uncomment `environment` section and `user` line in `docker-compose.yml`: it will result in container listening to it's own HTTP access logs
-1. Run `docker-compose up -d` in order to start rlb-stats
-1. API: Open [http://127.0.0.1/api/candle](http://127.0.0.1/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m)
-endpoint from example below to see all aggregated logs since the start of the container
-(would empty for a minute after you open this page for a first time)
-1. Dashboard: Open http://127.0.0.1/?from=20m URL to see dashboard with statistics
 
 ## API
 
@@ -44,74 +25,19 @@ endpoint from example below to see all aggregated logs since the start of the co
 
 `GET /api/candle`, parameters - `?from=<RFC3339_date>&to=<RFC3339_date>&aggregate=<duration>`
 
-- `from` (required) is the beginning of the interval, format example is `2006-01-02T15:04:05+07:00`
+Retrieve candles from storage.
+- `from` (required) is the beginning of the interval, format is RFC3339, for example `2006-01-02T15:04:05+07:00`
 - `to` (optional) is the end of the interval
 - `aggregate` (optional) is the aggregation interval (truncated to minute), format examples are `5m`, `600s`, `1h`
 
-#### Example
+`POST /api/insert`
 
-##### API calls
-
-<details>
-<summary>api/candle</summary>
-
+Insert LogRecord to storage. Expects LogRecord as a body:
 ```json
-$ http GET http://127.0.0.1/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m
-
-HTTP/1.1 200 OK
-Content-Type: application/json
-
-[
-  {
-    "Nodes": {
-      "n6.radio-t.com": {
-        "Volume": 1,
-        "Files": {
-          "rt_podcast585.mp3": 1
-        }
-      },
-      "n7.radio-t.com": {
-        "Volume": 1,
-        "Files": {
-          "rt_podcast584.mp3": 1,
-        }
-      },
-      "all": {
-        "Volume": 2,
-        "Files": {
-          "rt_podcast584.mp3": 1,
-          "rt_podcast585.mp3": 1
-        }
-      }
-    },
-    "StartMinute": "2018-02-18T15:35:00Z"
-  },
-  {
-    "Nodes": {
-      "n6.radio-t.com": {
-        "Volume": 5,
-        "Files": {
-          "rt_podcast579.mp3": 1,
-          "rt_podcast581.mp3": 1,
-          "rt_podcast583.mp3": 1,
-          "rt_podcast584.mp3": 1,
-          "rt_podcast585.mp3": 1
-        }
-      },
-      "all": {
-        "Volume": 5,
-        "Files": {
-          "rt_podcast579.mp3": 1,
-          "rt_podcast581.mp3": 1,
-          "rt_podcast583.mp3": 1,
-          "rt_podcast584.mp3": 1,
-          "rt_podcast585.mp3": 1
-        }
-      }
-    },
-    "StartMinute": "2018-02-18T15:37:00Z"
-  }
-]
+{
+	"from_ip": "172.21.0.1",
+	"ts": "2021-03-24T08:20:00Z",
+	"file_name": "rtfiles/rt_podcast659.mp3",
+	"dest": "n3.radio-t.com"
+}
 ```
-
-</details>
