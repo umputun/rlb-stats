@@ -230,11 +230,29 @@ func (s Server) insert(w http.ResponseWriter, r *http.Request) {
 		sendErrorJSON(w, r, http.StatusBadRequest, err, "Problem decoding JSON")
 		return
 	}
+	if l.Date.Equal(time.Time{}) {
+		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("missing field in JSON"), "ts")
+		return
+	}
+	if l.DestHost == "" {
+		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("missing field in JSON"), "dest")
+		return
+	}
+	if l.FileName == "" {
+		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("missing field in JSON"), "file_name")
+		return
+	}
+	if l.FromIP == "" {
+		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("missing field in JSON"), "from_ip")
+		return
+	}
 	err = saveLogRecord(s.Engine, s.Parser, l)
 	if err != nil {
 		sendErrorJSON(w, r, http.StatusInternalServerError, err, "Problem saving LogRecord")
 		return
 	}
 
-	render.JSON(w, r, struct{ result string }{"ok"})
+	render.JSON(w, r, struct {
+		Result string `json:"result"`
+	}{"ok"})
 }

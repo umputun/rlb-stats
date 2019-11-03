@@ -1,9 +1,11 @@
 package web
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/umputun/rlb-stats/app/logservice"
 	"github.com/umputun/rlb-stats/app/store"
 )
 
@@ -85,6 +88,8 @@ func TestServerAPI(t *testing.T) {
 		responseCode int
 		candles      []store.Candle
 		result       string
+		method       string
+		body         io.Reader
 	}{
 		{ts: goodServer, url: "/api/candle", responseCode: http.StatusBadRequest,
 			result: "{\"details\":\"\",\"error\":\"no 'from' field passed\"}\n"},
@@ -100,10 +105,33 @@ func TestServerAPI(t *testing.T) {
 			candles: []store.Candle{storedCandle}},
 		{ts: badServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v&aggregate=5m", startTime, url.QueryEscape(endTime)), responseCode: http.StatusBadRequest,
 			result: "{\"details\":\"can't load candles\",\"error\":\"test error\"}\n"},
+		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
+			result: "{\"details\":\"Problem decoding JSON\",\"error\":\"EOF\"}\n"},
+		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
+			body:   bytes.NewReader([]byte(`{}`)),
+			result: "{\"details\":\"ts\",\"error\":\"missing field in JSON\"}\n"},
+		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
+			body:   bytes.NewReader([]byte(`{"ts":"1970-01-01T01:01:00+01:00"}`)),
+			result: "{\"details\":\"dest\",\"error\":\"missing field in JSON\"}\n"},
+		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
+			body:   bytes.NewReader([]byte(`{"ts":"1970-01-01T01:01:00+01:00","dest":"test"}}`)),
+			result: "{\"details\":\"file_name\",\"error\":\"missing field in JSON\"}\n"},
+		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
+			body:   bytes.NewReader([]byte(`{"ts":"1970-01-01T01:01:00+01:00","file_name":"rt_test.mp3","dest":"test"}`)),
+			result: "{\"details\":\"from_ip\",\"error\":\"missing field in JSON\"}\n"},
+		{ts: badServer, url: "/api/insert", responseCode: http.StatusOK, method: http.MethodPost,
+			body:   bytes.NewReader([]byte(`{"from_ip":"127.0.0.1","file_name":"rt_test.mp3","dest":"new_node","ts":"1970-01-01T01:01:00+01:00"}`)),
+			result: "{\"result\":\"ok\"}\n"},
+		{ts: badServer, url: "/api/insert", responseCode: http.StatusInternalServerError, method: http.MethodPost,
+			body:   bytes.NewReader([]byte(`{"from_ip":"127.0.0.1","file_name":"rt_test.mp3","dest":"new_node","ts":"1970-01-01T01:00:00+01:00"}`)),
+			result: "{\"details\":\"Problem saving LogRecord\",\"error\":\"test error\"}\n"},
 	}
 	client := http.Client{}
 	for i, x := range testData {
-		req, err := http.NewRequest(http.MethodGet, x.ts.URL+x.url, nil)
+		if x.method == "" {
+			x.method = http.MethodGet
+		}
+		req, err := http.NewRequest(x.method, x.ts.URL+x.url, x.body)
 		require.NoError(t, err, i)
 		b, err := client.Do(req)
 		require.NoError(t, err, i)
@@ -130,6 +158,7 @@ func startupT(t *testing.T, badEngine bool) (ts *httptest.Server, srv *Server, t
 	srv = &Server{
 		address:      "127.0.0.1",
 		Engine:       storage,
+		Parser:       logservice.GetParser("^(?P<Date>.+) - (?:.+) - (?P<FileName>.+) - (?P<FromIP>.+) - (?:.+) - (?:.+) - https?://(?P<DestHost>.+?)/.+$", ""),
 		Port:         9999,
 		Version:      "test_version",
 		webappPrefix: "../../",
