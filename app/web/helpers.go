@@ -2,9 +2,9 @@ package web
 
 import (
 	"fmt"
-	"log"
 	"time"
 
+	log "github.com/go-pkgz/lgr"
 	"github.com/wcharczuk/go-chart"
 
 	"github.com/umputun/rlb-stats/app/store"

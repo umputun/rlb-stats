@@ -14,6 +14,11 @@ github.com/go-chi/chi
 github.com/go-chi/chi/middleware
 # github.com/go-chi/render v1.0.1
 github.com/go-chi/render
+# github.com/go-pkgz/lgr v0.6.3
+github.com/go-pkgz/lgr
+# github.com/go-pkgz/rest v1.4.1
+github.com/go-pkgz/rest
+github.com/go-pkgz/rest/logger
 # github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 github.com/golang/freetype/raster
 github.com/golang/freetype/truetype
@@ -21,6 +26,8 @@ github.com/golang/freetype/truetype
 github.com/jessevdk/go-flags
 # github.com/patrickmn/go-cache v2.1.0+incompatible
 github.com/patrickmn/go-cache
+# github.com/pkg/errors v0.8.0
+github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/stretchr/testify v1.3.0

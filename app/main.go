@@ -1,9 +1,9 @@
 package main
 
 import (
-	"log"
 	"os"
 
+	log "github.com/go-pkgz/lgr"
 	"github.com/jessevdk/go-flags"
 
 	"github.com/umputun/rlb-stats/app/store"
@@ -23,9 +23,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.SetFlags(log.Ldate | log.Ltime)
+	log.Setup(log.Msec, log.LevelBraces)
 	if opts.Dbg {
-		log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
+		log.Setup(log.Debug, log.CallerFile, log.Msec, log.LevelBraces)
 	}
 	log.Printf("rlb-stats %s", revision)
 	storage := getEngine(opts.BoltDB)

@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	bolt "github.com/etcd-io/bbolt"
+	log "github.com/go-pkgz/lgr"
 )
 
 var bucket = []byte("stats")
@@ -19,7 +19,7 @@ type Bolt struct {
 
 // NewBolt makes persistent boltdb based store
 func NewBolt(dbFile string) (*Bolt, error) {
-	log.Printf("[INFO] bolt (persitent) store, %s", dbFile)
+	log.Printf("[INFO] bolt (persistent) store, %s", dbFile)
 	result := Bolt{}
 	db, err := bolt.Open(dbFile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {

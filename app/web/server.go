@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"time"
 
@@ -14,6 +13,9 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+	log "github.com/go-pkgz/lgr"
+	"github.com/go-pkgz/rest"
+	"github.com/go-pkgz/rest/logger"
 	"github.com/wcharczuk/go-chart"
 
 	"github.com/umputun/rlb-stats/app/store"
@@ -35,7 +37,8 @@ type JSON map[string]interface{}
 // Run starts a web-server
 func (s *Server) Run() {
 	log.Printf("[INFO] activate web server on port %v", s.Port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("%v:%v", s.address, s.Port), s.routes()))
+	err := http.ListenAndServe(fmt.Sprintf("%v:%v", s.address, s.Port), s.routes())
+	log.Printf("[WARN] http server terminated, %s", err)
 }
 
 func (s *Server) routes() chi.Router {
@@ -44,23 +47,31 @@ func (s *Server) routes() chi.Router {
 	r.Use(middleware.Logger, middleware.Recoverer)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Timeout(60 * time.Second))
-	r.Use(tollbooth_chi.LimitHandler(tollbooth.NewLimiter(10, nil)))
-	r.Use(appInfo("rlb-stats", s.Version), Ping)
+	r.Use(rest.AppInfo("rlb-stats", "umputun", s.Version), rest.Ping)
 
-	r.Get("/", s.getDashboard)
-	r.Get("/file_stats", s.getFileStats)
-	r.Get("/chart", s.drawChart)
+	r.Group(func(rUI chi.Router) {
+		l := logger.New(logger.Log(log.Default()), logger.Prefix("[INFO]"))
+		rUI.Use(l.Handler)
+		rUI.Use(tollbooth_chi.LimitHandler(tollbooth.NewLimiter(10, nil)))
+		rUI.Get("/", s.getDashboard)
+		rUI.Get("/file_stats", s.getFileStats)
+		rUI.Get("/chart", s.drawChart)
+	})
 
-	r.Route("/api", func(r chi.Router) {
-		r.Get("/candle", s.getCandle)
-		r.Post("/insert", s.insert)
+	r.Group(func(rAPI chi.Router) {
+		l := logger.New(logger.Log(log.Default()), logger.Prefix("[DEBUG]"))
+		rAPI.Use(l.Handler)
+		rAPI.Route("/api", func(r chi.Router) {
+			r.With(tollbooth_chi.LimitHandler(tollbooth.NewLimiter(10, nil))).Get("/candle", s.getCandle)
+			r.With(tollbooth_chi.LimitHandler(tollbooth.NewLimiter(100, nil))).Post("/insert", s.insert)
+		})
 	})
 
 	return r
 }
 
 func sendErrorJSON(w http.ResponseWriter, r *http.Request, code int, err error, details string) {
-	log.Printf("[WARN] %s", details)
+	log.Printf("[DEBUG] %s", details)
 	render.Status(r, code)
 	render.JSON(w, r, JSON{"error": err.Error(), "details": details})
 }
