@@ -1,7 +1,6 @@
 # Build
 FROM umputun/baseimage:buildgo-latest as build
 
-ARG COVERALLS_TOKEN
 ARG CI
 ARG GIT_BRANCH
 ARG SKIP_TEST
