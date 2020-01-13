@@ -13,7 +13,7 @@ jobs:
     steps:
 
     - name: checkout code
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
 
     - name: debug if needed
       run: |
@@ -31,9 +31,11 @@ jobs:
 
     - name: build and test
       run: |
-        export TZ="America/Chicago"
+        echo $TZ
         go test -mod=vendor -timeout=60s -covermode=count -coverprofile=$GITHUB_WORKSPACE/profile.cov_tmp ./...
         cat $GITHUB_WORKSPACE/profile.cov_tmp | grep -v "_mock.go" > $GITHUB_WORKSPACE/profile.cov
+      env:
+        TZ: America/Chicago
 
     - name: install golangci-lint
       run: |
@@ -44,14 +46,10 @@ jobs:
 
     - name: run linters
       run: |
-        $GITHUB_WORKSPACE/golangci-lint run --out-format=tab --disable-all --tests=false --enable=unconvert \
-          --enable=megacheck --enable=structcheck --enable=gas --enable=gocyclo --enable=dupl --enable=misspell \
-          --enable=unparam --enable=varcheck --enable=deadcode --enable=typecheck \
-          --enable=ineffassign --enable=varcheck ./... ;
+        $GITHUB_WORKSPACE/golangci-lint run --config $GITHUB_WORKSPACE/.golangci.yml ./... ;
 
     - name: submit coverage
       run: |
-        export GIT_BRANCH=$GITHUB_REF
         $(go env GOPATH)/bin/goveralls -service="github" -coverprofile=$GITHUB_WORKSPACE/profile.cov
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
