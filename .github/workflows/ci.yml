@@ -45,8 +45,7 @@ jobs:
       run: GO111MODULE=off go get -u -v github.com/mattn/goveralls
 
     - name: run linters
-      run: |
-        $GITHUB_WORKSPACE/golangci-lint run --config $GITHUB_WORKSPACE/.golangci.yml ./... ;
+      run: $GITHUB_WORKSPACE/golangci-lint run --config $GITHUB_WORKSPACE/.golangci.yml ./... ;
 
     - name: submit coverage
       run: |
