@@ -32,20 +32,19 @@ jobs:
     - name: build and test
       run: |
         echo $TZ
-        go test -mod=vendor -timeout=60s -covermode=count -coverprofile=$GITHUB_WORKSPACE/profile.cov_tmp ./...
-        cat $GITHUB_WORKSPACE/profile.cov_tmp | grep -v "_mock.go" > $GITHUB_WORKSPACE/profile.cov
+        go test -mod=vendor -timeout=60s -covermode=count -coverprofile=$GITHUB_WORKSPACE/profile.cov ./...
       env:
         TZ: America/Chicago
 
     - name: install golangci-lint
       run: |
-        curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $GITHUB_WORKSPACE v1.20.0
+        curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $GITHUB_WORKSPACE v1.23.1
 
     - name: install goveralls
       run: GO111MODULE=off go get -u -v github.com/mattn/goveralls
 
     - name: run linters
-      run: $GITHUB_WORKSPACE/golangci-lint run --config $GITHUB_WORKSPACE/.golangci.yml ./... ;
+      run: ./golangci-lint run --config ./.golangci.yml ./... ;
 
     - name: submit coverage
       run: $(go env GOPATH)/bin/goveralls -service="github" -coverprofile=$GITHUB_WORKSPACE/profile.cov

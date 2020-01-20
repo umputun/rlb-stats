@@ -14,9 +14,7 @@ WORKDIR /app
 RUN \
     if [ -z "$SKIP_TEST" ] ; then \
         go test -timeout=30s  ./... && \
-        golangci-lint run --disable-all --deadline=300s --enable=vet --enable=vetshadow --enable=golint \
-          --enable=staticcheck --enable=ineffassign --enable=goconst --enable=errcheck --enable=unconvert \
-          --enable=deadcode --enable=gosimple ./... ; \
+        golangci-lint run --config ./.golangci.yml ./... ; \
     else echo "skip tests and linter" ; fi
 
 
