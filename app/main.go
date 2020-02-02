@@ -10,7 +10,7 @@ import (
 	"github.com/umputun/rlb-stats/app/web"
 )
 
-var opts struct {
+type opts struct {
 	BoltDB string `long:"bolt" env:"BOLT_FILE" default:"/tmp/rlb-stats.bd" description:"boltdb file path"`
 	Port   int    `long:"port" env:"PORT" default:"8080" description:"Web server port"`
 	Dbg    bool   `long:"dbg" env:"DEBUG" description:"debug mode"`
@@ -19,6 +19,7 @@ var opts struct {
 var revision string
 
 func main() {
+	var opts opts
 	if _, err := flags.Parse(&opts); err != nil {
 		os.Exit(1)
 	}
