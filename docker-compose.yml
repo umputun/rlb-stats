@@ -19,3 +19,30 @@ services:
 
     ports:
     - "8080:8080"
+
+  rlb:
+    # this server redirects traffic into itself
+    # and it's only purpose is generating raw data for rlb-stats,
+    # see README.md for details
+    image: umputun/rlb:master
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    hostname: rlb
+    restart: always
+    container_name: rlb
+
+    ports:
+    - 7070:7070
+
+    volumes:
+    - ./rlb-sample.yml:/srv/rlb.yml
+
+    environment:
+    - CONF=/srv/rlb.yml
+    - STATS=http://rlb-stats:8080/api/insert
+    - TIMEOUT=10s
+    - REFRESH=60s
+    - DEBUG=true
