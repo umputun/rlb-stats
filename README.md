@@ -4,11 +4,28 @@ Stats collector for [RLB](https://github.com/umputun/rlb) with REST interface an
 
 ## Run instructions
 
-1. Run `docker-compose up` in order to start rlb-stats
-1. API: Open [http://127.0.0.1:8080/api/candle](http://127.0.0.1:8080/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m)
-endpoint from example below to see all aggregated logs since the start of the container
-(would empty for a minute after you open this page for a first time)
-1. Dashboard: Open http://127.0.0.1:8080/?from=20m URL to see dashboard with statistics
+Run `docker-compose up` in order to start rlb-stats and rlb (for data generation).
+
+### Generate data
+
+Run following command in the terminal in order to generate traffic for rlb-stats:
+
+```sh
+while true; do
+  curl "http://127.0.0.1:7070/api/v1/jump/test1?url=/mp3files/test_file_$(((RANDOM % 10) + 1)).mp3" >/dev/null 2>&1
+  curl "http://localhost:7070/api/v1/jump/test1?url=/mp3files/test_file_$(((RANDOM % 10) + 1)).mp3" >/dev/null 2>&1
+  sleep $(((RANDOM % 10) + 1))
+done
+```
+
+
+### API
+
+Open [http://127.0.0.1:8080/api/candle](http://127.0.0.1:8080/api/candle?from=2018-02-18T15:35:00-00:00&to=2032-02-18T15:38:00-00:00&aggregate=2m)
+endpoint from to see all aggregated logs since the start of the container.
+
+### Dashboard
+Open http://127.0.0.1:8080/?from=20m URL to see dashboard with statistics
 
 ### Application parameters
 
