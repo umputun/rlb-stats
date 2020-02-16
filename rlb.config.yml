@@ -5,6 +5,10 @@ services:
     ping: /api/v1/ping
     method: GET
     weight: 1
+  - server: http://localhost:7070
+    ping: /api/v1/ping
+    method: GET
+    weight: 1
 
 no_node:
 

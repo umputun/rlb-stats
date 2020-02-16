@@ -13,7 +13,6 @@ Run following command in the terminal in order to generate traffic for rlb-stats
 ```sh
 while true; do
   curl "http://127.0.0.1:7070/api/v1/jump/test1?url=/mp3files/test_file_$(((RANDOM % 10) + 1)).mp3" >/dev/null 2>&1
-  curl "http://localhost:7070/api/v1/jump/test1?url=/mp3files/test_file_$(((RANDOM % 10) + 1)).mp3" >/dev/null 2>&1
   sleep $(((RANDOM % 10) + 1))
 done
 ```
