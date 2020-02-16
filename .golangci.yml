@@ -7,17 +7,39 @@ run:
     - vendor
 linters:
   enable:
-    - unconvert
-    - megacheck
-    - structcheck
-    - gas
-    - gocyclo
-    - dupl
-    - misspell
-    - unparam
-    - varcheck
-    - deadcode
-    - typecheck
-    - ineffassign
-    - varcheck
+  - bodyclose
+  - deadcode
+  - depguard
+  - dogsled
+  - dupl
+  - gas
+  - errcheck
+  - gochecknoinits
+  - goconst
+  - gocritic
+  - gocyclo
+  - gofmt
+  - goimports
+  - golint
+  - goprintffuncname
+  - gochecknoinits
+  - gosec
+  - gosimple
+  - govet
+  - ineffassign
+  - interfacer
+  - misspell
+  - megacheck
+  - nakedret
+  - rowserrcheck
+  - scopelint
+  - staticcheck
+  - structcheck
+  - stylecheck
+  - typecheck
+  - unconvert
+  - unparam
+  - unused
+  - varcheck
+  - whitespace
   disable-all: true

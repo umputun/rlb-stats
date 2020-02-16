@@ -43,9 +43,9 @@ func TestSendErrorJSON(t *testing.T) {
 }
 
 func TestServerUI(t *testing.T) {
-	goodServer, _, goodTeardown := startupT(t, false)
+	goodServer, goodTeardown := startupT(t, false)
 	defer goodTeardown()
-	badServer, _, badTeardown := startupT(t, true)
+	badServer, badTeardown := startupT(t, true)
 	defer badTeardown()
 
 	var testData = []struct {
@@ -68,15 +68,16 @@ func TestServerUI(t *testing.T) {
 		b, err := client.Do(req)
 		require.NoError(t, err, i)
 		body, err := ioutil.ReadAll(b.Body)
+		b.Body.Close()
 		require.NoError(t, err, i)
 		assert.Equal(t, x.responseCode, b.StatusCode, "case %d: %v", i, string(body))
 	}
 }
 
 func TestServerAPI(t *testing.T) {
-	goodServer, _, goodTeardown := startupT(t, false)
+	goodServer, goodTeardown := startupT(t, false)
 	defer goodTeardown()
-	badServer, _, badTeardown := startupT(t, true)
+	badServer, badTeardown := startupT(t, true)
 	defer badTeardown()
 
 	startTime := time.Time{}.Format(time.RFC3339)
@@ -134,6 +135,7 @@ func TestServerAPI(t *testing.T) {
 		require.NoError(t, err, i)
 		b, err := client.Do(req)
 		require.NoError(t, err, i)
+		defer b.Body.Close()
 		body, err := ioutil.ReadAll(b.Body)
 		require.NoError(t, err, i)
 		if x.result != "" {
@@ -151,10 +153,10 @@ func TestServerAPI(t *testing.T) {
 	}
 }
 
-func startupT(t *testing.T, badEngine bool) (ts *httptest.Server, srv *Server, teardown func()) {
+func startupT(t *testing.T, badEngine bool) (ts *httptest.Server, teardown func()) {
 	storage, engineTeardown := startupEngine(t, badEngine)
 
-	srv = &Server{
+	srv := &Server{
 		address:      "127.0.0.1",
 		Engine:       storage,
 		Aggregator:   &store.Aggregator{},
@@ -170,5 +172,5 @@ func startupT(t *testing.T, badEngine bool) (ts *httptest.Server, srv *Server, t
 		engineTeardown()
 	}
 
-	return ts, srv, teardown
+	return ts, teardown
 }
