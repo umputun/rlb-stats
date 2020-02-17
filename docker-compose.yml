@@ -38,7 +38,7 @@ services:
     - 7070:7070
 
     volumes:
-    - ./rlb-sample.yml:/srv/rlb.yml
+    - ./rlb.config.yml:/srv/rlb.yml
 
     environment:
     - CONF=/srv/rlb.yml
