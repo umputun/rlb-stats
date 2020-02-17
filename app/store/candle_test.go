@@ -58,7 +58,6 @@ var logsTestsTable = []struct {
 }
 
 func TestNewAndUpdateCandle(t *testing.T) {
-
 	candle := NewCandle()
 	for _, testPair := range logsTestsTable {
 		candle.Update(testPair.in)

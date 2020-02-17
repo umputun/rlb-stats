@@ -38,5 +38,4 @@ func TestStats(t *testing.T) {
 	//	big number request should return all results
 	assert.EqualValues(t, results[3].topFiles, getTop("files", candles, 100), "candle match with expected output")
 	assert.EqualValues(t, results[3].topNodes, getTop("nodes", candles, 100), "candle match with expected output")
-
 }

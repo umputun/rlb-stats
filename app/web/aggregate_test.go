@@ -125,7 +125,6 @@ var resultCandles = map[int][]store.Candle{
 }
 
 func TestAggregation(t *testing.T) {
-
 	for i, result := range resultCandles {
 		testSlice := aggregateCandles(testCandles, time.Duration(i)*time.Minute)
 		assert.EqualValues(t, result, testSlice, "candle aggregate for %v minutes match with expected output", i)
