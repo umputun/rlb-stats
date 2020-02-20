@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+    <script
+      src="https://cdn.anychart.com/releases/8.7.1/js/anychart-base.min.js"
+      type="text/javascript"
+    ></script>
+    <style>
+      body {
+        text-align: center;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      .chart {
+        width: 50%;
+        height: 85vh;
+        min-height: 500px;
+        margin: auto;
+      }
+      @media (max-width: 800px) {
+        .chart {
+          width: 100%;
+        }
+      }
+      .period-button {
+        color: rgb(69, 90, 101);
+        font-weight: bold;
+      }
+      .charts {
+        display: flex;
+        flex-flow: row wrap;
+      }
+      h4 {
+        color: rgb(69, 90, 101);
+      }
+    </style>
+  </head>
+  <body>
+    <button class="period-button" id="1hour">1 hour</button>
+    <button class="period-button" id="12hours">12 hours</button>
+    <button class="period-button" id="24hours">24 hours</button>
+    <button class="period-button" id="10days">10 days</button>
+    <div class="charts">
+      <div class="chart" id="top-files"></div>
+      <div class="chart" id="top-nodes"></div>
+    </div>
+    <script src="index.js"></script>
+  </body>
+</html>
