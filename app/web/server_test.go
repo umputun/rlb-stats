@@ -63,14 +63,18 @@ func TestServerUI(t *testing.T) {
 	}
 	client := http.Client{}
 	for i, x := range testData {
-		req, err := http.NewRequest(http.MethodGet, x.ts.URL+x.url, nil)
-		require.NoError(t, err, i)
-		b, err := client.Do(req)
-		require.NoError(t, err, i)
-		body, err := ioutil.ReadAll(b.Body)
-		b.Body.Close()
-		require.NoError(t, err, i)
-		assert.Equal(t, x.responseCode, b.StatusCode, "case %d: %v", i, string(body))
+		i := i
+		x := x
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodGet, x.ts.URL+x.url, nil)
+			require.NoError(t, err, i)
+			b, err := client.Do(req)
+			require.NoError(t, err, i)
+			body, err := ioutil.ReadAll(b.Body)
+			b.Body.Close()
+			require.NoError(t, err, i)
+			assert.Equal(t, x.responseCode, b.StatusCode, string(body))
+		})
 	}
 }
 
@@ -128,28 +132,32 @@ func TestServerAPI(t *testing.T) {
 	}
 	client := http.Client{}
 	for i, x := range testData {
-		if x.method == "" {
-			x.method = http.MethodGet
-		}
-		req, err := http.NewRequest(x.method, x.ts.URL+x.url, x.body)
-		require.NoError(t, err, i)
-		b, err := client.Do(req)
-		require.NoError(t, err, i)
-		defer b.Body.Close()
-		body, err := ioutil.ReadAll(b.Body)
-		require.NoError(t, err, i)
-		if x.result != "" {
-			assert.Equal(t, x.result, string(body), i)
-		}
-		if x.candles != nil {
-			var candles []store.Candle
-			err = json.Unmarshal(body, &candles)
-			if err != nil {
-				require.Nil(t, string(body), "problem parsing response body, case %d", i)
+		i := i
+		x := x
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			if x.method == "" {
+				x.method = http.MethodGet
 			}
-			assert.Equal(t, x.candles, candles, i)
-		}
-		assert.Equal(t, x.responseCode, b.StatusCode, "case %d: %v", i, string(body))
+			req, err := http.NewRequest(x.method, x.ts.URL+x.url, x.body)
+			require.NoError(t, err, i)
+			b, err := client.Do(req)
+			require.NoError(t, err, i)
+			defer b.Body.Close()
+			body, err := ioutil.ReadAll(b.Body)
+			require.NoError(t, err, i)
+			if x.result != "" {
+				assert.Equal(t, x.result, string(body), i)
+			}
+			if x.candles != nil {
+				var candles []store.Candle
+				err = json.Unmarshal(body, &candles)
+				if err != nil {
+					require.Nil(t, string(body), "problem parsing response body")
+				}
+				assert.Equal(t, x.candles, candles, i)
+			}
+			assert.Equal(t, x.responseCode, b.StatusCode, string(body))
+		})
 	}
 }
 
