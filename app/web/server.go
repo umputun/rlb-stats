@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/didip/tollbooth"
@@ -214,15 +215,24 @@ func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 		}
 		toTime = t
 	}
-	duration := time.Minute
+	aggDuration := toTime.Sub(fromTime).Truncate(time.Second) / 100
 	if a := r.URL.Query().Get("aggregate"); a != "" {
-		duration, err = time.ParseDuration(a)
+		aggDuration, err = time.ParseDuration(a)
 		if err != nil {
 			sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'aggregate' field")
 			return
 		}
 	}
-	candles, err := loadCandles(s.Engine, fromTime, toTime, duration)
+	if n := r.URL.Query().Get("max_points"); n != "" {
+		i, err := strconv.ParseUint(n, 10, 8)
+		if err != nil {
+			sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'max_points' field")
+			return
+		}
+		aggDuration = toTime.Sub(fromTime).Truncate(time.Second) / time.Duration(i)
+	}
+
+	candles, err := loadCandles(s.Engine, fromTime, toTime, aggDuration)
 	if err != nil {
 		sendErrorJSON(w, r, http.StatusBadRequest, err, "can't load candles")
 		return
