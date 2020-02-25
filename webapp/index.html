@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Document</title>
+    <title>rlb-stats</title>
     <script
       src="https://cdn.anychart.com/releases/8.7.1/js/anychart-base.min.js"
       type="text/javascript"
@@ -12,7 +12,9 @@
     <style>
       body {
         text-align: center;
-        font-family: Arial, Helvetica, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
+          Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji,
+          Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
       }
       .chart {
         width: 50%;
@@ -39,10 +41,13 @@
     </style>
   </head>
   <body>
-    <button class="period-button" id="1hour">1 hour</button>
-    <button class="period-button" id="12hours">12 hours</button>
-    <button class="period-button" id="24hours">24 hours</button>
-    <button class="period-button" id="10days">10 days</button>
+    <div id="period-buttons">
+      <button data-minutes="60">1 hour</button>
+      <button data-minutes="720">12 hours</button>
+      <button data-minutes="1440">24 hours</button>
+      <button data-minutes="14400">10 days</button>
+    </div>
+    <p id="error"></p>
     <div class="charts">
       <div class="chart" id="top-files"></div>
       <div class="chart" id="top-nodes"></div>
