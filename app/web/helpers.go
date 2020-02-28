@@ -39,13 +39,13 @@ func calculateTimePeriod(from, to string) (time.Time, time.Time, time.Duration) 
 }
 
 // loadCandles loads candles for given period of time aggregated by given duration
-func loadCandles(engine store.Engine, from time.Time, to time.Time, duration time.Duration) ([]store.Candle, error) {
+func loadCandles(engine store.Engine, from time.Time, to time.Time, aggDuration time.Duration) ([]store.Candle, error) {
 	candles, err := engine.Load(from, to)
 	if err != nil {
 		return nil, err
 	}
-	if duration != time.Minute {
-		candles = aggregateCandles(candles, duration)
+	if aggDuration != time.Minute {
+		candles = aggregateCandles(candles, aggDuration)
 	}
 	return candles, nil
 }
