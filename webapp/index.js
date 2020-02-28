@@ -6,16 +6,16 @@ async function loadData(args) {
   errorParagraph.innerHTML = "";
   try {
     const response = await fetch(url);
+    if (!response.ok) {
+      errorParagraph.innerHTML = `Error retrieving data for graphs: ${response.status} ${response.statusText}`;
+      return [];
+    }
+    const jsonData = await response.json();
+    return jsonData;
   } catch (error) {
     errorParagraph.innerHTML = `Error retrieving data for graphs: ${error.message}`;
     return [];
   }
-  if (!response.ok) {
-    errorParagraph.innerHTML = `Error retrieving data for graphs: ${response.status} ${response.statusText}`;
-    return [];
-  }
-  const jsonData = await response.json();
-  return jsonData;
 }
 
 function transformToFiles(jsonData) {
