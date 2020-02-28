@@ -45,8 +45,6 @@ func TestSendErrorJSON(t *testing.T) {
 func TestServerUI(t *testing.T) {
 	goodServer, goodTeardown := startupT(t, false)
 	defer goodTeardown()
-	badServer, badTeardown := startupT(t, true)
-	defer badTeardown()
 
 	var testData = []struct {
 		ts           *httptest.Server
@@ -54,12 +52,6 @@ func TestServerUI(t *testing.T) {
 		responseCode int
 	}{
 		{ts: goodServer, url: "/", responseCode: http.StatusOK},
-		{ts: goodServer, url: "/file_stats", responseCode: http.StatusUnprocessableEntity},
-		{ts: goodServer, url: "/file_stats?filename=test", responseCode: http.StatusOK},
-		{ts: goodServer, url: "/chart", responseCode: http.StatusBadRequest},
-		{ts: badServer, url: "/chart", responseCode: http.StatusInternalServerError},
-		{ts: badServer, url: "/", responseCode: http.StatusInternalServerError},
-		{ts: badServer, url: "/file_stats?filename=test", responseCode: http.StatusInternalServerError},
 	}
 	client := http.Client{}
 	for i, x := range testData {

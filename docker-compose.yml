@@ -15,6 +15,7 @@ services:
 
     volumes:
     - /tmp:/tmp
+    - ./webapp:/srv/webapp
     - /var/run/docker.sock:/var/run/docker.sock
 
     ports:
