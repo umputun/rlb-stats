@@ -10,8 +10,7 @@ async function loadData(args) {
       errorParagraph.innerHTML = `Error retrieving data for graphs: ${response.status} ${response.statusText}`;
       return [];
     }
-    const jsonData = await response.json();
-    return jsonData;
+    return await response.json();
   } catch (error) {
     errorParagraph.innerHTML = `Error retrieving data for graphs: ${error.message}`;
     return [];
@@ -20,7 +19,7 @@ async function loadData(args) {
 
 function transformToFiles(jsonData) {
   if (jsonData.length === 0) {
-    return { files: [], nodes: [] };
+    return {files: [], nodes: []};
   }
   const filesData = jsonData.reduce(
     (acc, element) => {
@@ -63,7 +62,7 @@ function transformToFiles(jsonData) {
 
       return acc;
     },
-    { files: [{ file: "all", data: [] }], nodes: [] }
+    {files: [{file: "all", data: []}], nodes: []}
   );
 
   const sortedFilesData = sortFilesOrNodes(filesData.files);
@@ -109,6 +108,7 @@ async function loadAndDraw(minutes = 24 * 60) {
     `Top 10 nodes from ${args.from.toLocaleDateString([], dateTimeOptions)}`
   );
 }
+
 const buttons = document.getElementById("period-buttons");
 buttons.onclick = event => {
   loadAndDraw(parseInt(event.target.dataset.minutes));
@@ -118,12 +118,12 @@ function drawChart(data, container, title) {
   //clear the container
   document.getElementById(container).innerHTML = `<h4>${title}</h4>`;
   const chart = anychart.line();
-  const lines = data.map(el => {
-    const line = chart.spline(el.data);
-    if (el.file) {
-      line.name(el.file);
-    } else if (el.node) {
-      line.name(el.node);
+  data.map(elem => {
+    const line = chart.spline(elem.data);
+    if (elem.file) {
+      line.name(elem.file);
+    } else if (elem.node) {
+      line.name(elem.node);
     }
     return line;
   });
@@ -218,11 +218,11 @@ function getReadableDuration(minutes) {
   let tempMinutes = minutes;
   let readableDate = "";
   if (tempMinutes >= 60 * 24) {
-    readableDate += new String(Math.floor(tempMinutes / (60 * 24))) + "d";
+    readableDate += String(Math.floor(tempMinutes / (60 * 24))) + "d";
     tempMinutes = tempMinutes % (60 * 24);
   }
   if (tempMinutes >= 60) {
-    readableDate += new String(Math.floor(tempMinutes / 60)) + "h";
+    readableDate += String(Math.floor(tempMinutes / 60)) + "h";
     tempMinutes = tempMinutes % 60;
   }
   if (tempMinutes > 0) {
@@ -232,15 +232,11 @@ function getReadableDuration(minutes) {
 }
 
 function sortFilesOrNodes(arr) {
-  const sortedData = arr.sort((a, b) => {
-    return (
-      b.data.reduce((acc, element) => {
-        return (acc += element[1]);
-      }, 0) -
-      a.data.reduce((acc, element) => {
-        return (acc += element[1]);
-      }, 0)
-    );
+  return arr.sort((a, b) => {
+    return b.data.reduce((acc, element) => {
+      return acc + element[1];
+    }, 0) - a.data.reduce((acc, element) => {
+      return acc + element[1];
+    }, 0);
   });
-  return sortedData;
 }
