@@ -47,7 +47,7 @@ function setTitle(minutes) {
 
 async function drawPage(minutes, drawChart) {
   try {
-    const queryParams = createQueryParams(defaultMinutes);
+    const queryParams = createQueryParams(minutes);
     setTitle(minutes);
     const data = await loadData(queryParams);
     drawChart({data: data.files, title: getTopFilesTitle(queryParams.from), container: topFilesContainer});

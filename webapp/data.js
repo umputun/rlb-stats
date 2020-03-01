@@ -38,7 +38,7 @@ async function fetchData(queryParams) {
     if (!response.ok) {
       const error = makeError(`${response.status} ${response.statusText}`);
       error.httpError = true;
-      return [];
+      throw error;
     }
     return await response.json();
   } catch (error) {
