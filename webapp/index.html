@@ -9,6 +9,23 @@
       src="https://cdn.anychart.com/releases/8.7.1/js/anychart-base.min.js"
       type="text/javascript"
     ></script>
+    <script
+      src="//cdn.jsdelivr.net/d3js/latest/d3.min.js"
+      charset="utf-8"
+    ></script>
+    <script
+      src="//cdn.jsdelivr.net/npm/taucharts@2/dist/taucharts.min.js"
+      type="text/javascript"
+    ></script>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="//cdn.jsdelivr.net/npm/taucharts@2/dist/taucharts.min.css"
+    />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/echarts/4.6.0/echarts-en.min.js"
+      type="text/javascript"
+    ></script>
     <style>
       body {
         text-align: center;
@@ -52,6 +69,16 @@
       <div class="chart" id="top-files"></div>
       <div class="chart" id="top-nodes"></div>
     </div>
+    <div class="charts">
+      <div class="chart" id="tau-top-files"></div>
+      <div class="chart" id="tau-top-nodes"></div>
+    </div>
+    <div class="charts">
+      <div class="chart" id="top-files-e"></div>
+      <div class="chart" id="top-nodes-e"></div>
+    </div>
     <script src="index.js"></script>
+    <script src="tau.js"></script>
+    <script src="echarts.js"></script>
   </body>
 </html>
