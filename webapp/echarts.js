@@ -110,8 +110,11 @@ async function loadAndDrawE(minutes = 24 * 60) {
 }
 
 const buttonsE = document.getElementById("period-buttons");
-buttonsE.addEventListener("click", event =>
-  loadAndDrawE(parseInt(event.target.dataset.minutes))
+buttonsE.addEventListener(
+  "click",
+  event =>
+    event.target.tagName === "BUTTON" &&
+    loadAndDrawE(parseInt(event.target.dataset.minutes))
 );
 
 function drawChartE(data, container, title) {

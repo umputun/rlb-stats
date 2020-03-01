@@ -19,7 +19,7 @@ async function loadData(args) {
 
 function transformToFiles(jsonData) {
   if (jsonData.length === 0) {
-    return {files: [], nodes: []};
+    return { files: [], nodes: [] };
   }
   const filesData = jsonData.reduce(
     (acc, element) => {
@@ -62,7 +62,7 @@ function transformToFiles(jsonData) {
 
       return acc;
     },
-    {files: [{file: "all", data: []}], nodes: []}
+    { files: [{ file: "all", data: [] }], nodes: [] }
   );
 
   const sortedFilesData = sortFilesOrNodes(filesData.files);
@@ -110,8 +110,11 @@ async function loadAndDraw(minutes = 24 * 60) {
 }
 
 const buttons = document.getElementById("period-buttons");
-buttons.addEventListener("click", event =>
-  loadAndDraw(parseInt(event.target.dataset.minutes))
+buttons.addEventListener(
+  "click",
+  event =>
+    event.target.tagName === "BUTTON" &&
+    loadAndDraw(parseInt(event.target.dataset.minutes))
 );
 
 function drawChart(data, container, title) {
@@ -233,10 +236,13 @@ function getReadableDuration(minutes) {
 
 function sortFilesOrNodes(arr) {
   return arr.sort((a, b) => {
-    return b.data.reduce((acc, element) => {
-      return acc + element[1];
-    }, 0) - a.data.reduce((acc, element) => {
-      return acc + element[1];
-    }, 0);
+    return (
+      b.data.reduce((acc, element) => {
+        return acc + element[1];
+      }, 0) -
+      a.data.reduce((acc, element) => {
+        return acc + element[1];
+      }, 0)
+    );
   });
 }

@@ -96,8 +96,11 @@ async function loadAndDrawTau(minutes = 24 * 60) {
 }
 
 const buttonsTau = document.getElementById("period-buttons");
-buttonsTau.addEventListener("click", event =>
-  loadAndDrawTau(parseInt(event.target.dataset.minutes))
+buttonsTau.addEventListener(
+  "click",
+  event =>
+    event.target.tagName === "BUTTON" &&
+    loadAndDrawTau(parseInt(event.target.dataset.minutes))
 );
 
 function getReadableDurationTau(minutes) {
