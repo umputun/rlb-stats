@@ -1,4 +1,5 @@
 export function drawChart({data, container, title}) {
+  // TODO this fails in case of empty data
   const dataType = data[0].file ? "file" : "node";
   const myChart = echarts.init(container);
   // specify chart configuration item and data
@@ -9,7 +10,7 @@ export function drawChart({data, container, title}) {
     tooltip: {},
     legend: {
       type: 'scroll',
-      data: (function (){
+      data: (function () {
         return data.map((datum) => datum[dataType]);
       })()
     },

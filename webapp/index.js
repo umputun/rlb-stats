@@ -1,11 +1,10 @@
-import {getReadableDuration, loadData, createQueryParams, dateTimeOptions} from './data.js';
+import {createQueryParams, dateTimeOptions, getReadableDuration, loadData} from './data.js';
 import {drawChart as drawAnyChart} from './anycharts.js';
 import {drawChart as drawTauChart} from './taucharts.js';
 import {drawChart as drawEChart} from './echarts.js';
 
 // default charts are for last 24 hours
 const defaultMinutes = 24 * 60;
-
 
 const topFilesContainer = document.getElementById('top-files');
 const topNodesContainer = document.getElementById('top-nodes');
