@@ -1,7 +1,7 @@
-import {dateTimeOptions} from './data.js'
+import { dateTimeOptions } from "./data.js";
 
-
-function drawChart({data, container, title}) {
+function drawChart({ data, container, title }) {
+  container.className = `chart anychart`;
   //clear the container
   container.innerHTML = `<h4>${title}</h4>`;
   const chart = anychart.line();
@@ -101,6 +101,4 @@ function drawChart({data, container, title}) {
   chart.draw();
 }
 
-export {
-  drawChart
-}
+export { drawChart };

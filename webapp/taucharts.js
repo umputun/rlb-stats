@@ -25,6 +25,7 @@ function convertDataToTauChartFormat(data) {
 }
 
 export async function drawChart({data, container}) {
+  container.className = `chart tauchart`;
   const chartData = convertDataToTauChartFormat(data);
   const lineName = chartData[0].file ? "file" : "node";
   const config = {

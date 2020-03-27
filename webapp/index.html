@@ -26,6 +26,10 @@
       src="https://cdnjs.cloudflare.com/ajax/libs/echarts/4.6.0/echarts-en.min.js"
       type="text/javascript"
     ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/apexcharts@3.16.0"
+      type="text/javascript"
+    ></script>
     <style>
       body {
         text-align: center;
@@ -33,11 +37,16 @@
           Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji,
           Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
       }
+
       .chart {
         width: 50%;
+        margin: auto;
+      }
+      .anychart,
+      .echart,
+      .tauchart {
         height: 85vh;
         min-height: 500px;
-        margin: auto;
       }
       @media (max-width: 800px) {
         .chart {
@@ -51,6 +60,7 @@
       .charts {
         display: flex;
         flex-flow: row wrap;
+        justify-content: space-evenly;
       }
       h4 {
         color: rgb(69, 90, 101);
@@ -63,12 +73,14 @@
       <button data-minutes="720">12 hours</button>
       <button data-minutes="1440">24 hours</button>
       <button data-minutes="14400">10 days</button>
+      <button data-minutes="43200">30 days</button>
     </div>
     <div>
       <select id="chart-type">
         <option value="tau">TauCharts</option>
         <option value="e">ECharts</option>
         <option value="any">AnyCharts</option>
+        <option value="apex">ApexCharts</option>
       </select>
     </div>
     <p id="error"></p>

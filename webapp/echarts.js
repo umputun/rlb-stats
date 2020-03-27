@@ -1,20 +1,31 @@
-export function drawChart({data, container, title}) {
-  // TODO this fails in case of empty data
-  const dataType = data[0].file ? "file" : "node";
-  const myChart = echarts.init(container);
+let charts = {};
+export function drawChart({ data, container, title }) {
+  container.className = `chart echart`;
+  const dataType = data.length > 0 && data[0].file ? "file" : "node";
+  if (!charts[dataType]) {
+    charts[dataType] = echarts.init(container);
+  }
   // specify chart configuration item and data
   var option = {
     title: {
       text: title
     },
+    grid: {
+      height: "40%",
+      width: "100%",
+      bottom: "50%"
+    },
     tooltip: {},
     legend: {
-      type: 'scroll',
-      data: (function () {
-        return data.map((datum) => datum[dataType]);
-      })()
+      type: "scroll",
+      data: (function() {
+        return data.map(datum => datum[dataType]);
+      })(),
+      bottom: 0,
+      orient: "vertical",
+      height: "40%"
     },
-    xAxis: {type: "time"},
+    xAxis: { type: "time" },
     yAxis: {},
     series: data.map(datum => {
       return {
@@ -31,5 +42,10 @@ export function drawChart({data, container, title}) {
   };
 
   // use configuration item and data specified to show chart
-  myChart.setOption(option);
+  charts[dataType].setOption(option);
+}
+
+export function redraw() {
+  charts.file.resize();
+  charts.node.resize();
 }
