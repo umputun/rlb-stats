@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/didip/tollbooth"
@@ -16,7 +18,6 @@ import (
 	log "github.com/go-pkgz/lgr"
 	"github.com/go-pkgz/rest"
 	"github.com/go-pkgz/rest/logger"
-	"github.com/wcharczuk/go-chart"
 
 	"github.com/umputun/rlb-stats/app/store"
 )
@@ -53,9 +54,9 @@ func (s *Server) routes() chi.Router {
 		l := logger.New(logger.Log(log.Default()), logger.Prefix("[INFO]"))
 		rUI.Use(l.Handler)
 		rUI.Use(tollbooth_chi.LimitHandler(tollbooth.NewLimiter(10, nil)))
-		rUI.Get("/", s.getDashboard)
-		rUI.Get("/file_stats", s.getFileStats)
-		rUI.Get("/chart", s.drawChart)
+		workDir, _ := os.Getwd()
+		filesDir := filepath.Join(workDir, s.webappPrefix+"webapp")
+		fileServer(rUI, "/", http.Dir(filesDir))
 	})
 
 	r.Group(func(rAPI chi.Router) {
@@ -74,123 +75,6 @@ func sendErrorJSON(w http.ResponseWriter, r *http.Request, code int, err error, 
 	log.Printf("[DEBUG] %s", details)
 	render.Status(r, code)
 	render.JSON(w, r, JSON{"error": err.Error(), "details": details})
-}
-
-// GET /
-func (s Server) getDashboard(w http.ResponseWriter, r *http.Request) {
-	from := r.URL.Query().Get("from")
-	to := r.URL.Query().Get("to")
-	fromTime, toTime, aggDuration := calculateTimePeriod(from, to)
-	candles, err := loadCandles(s.Engine, fromTime, toTime, aggDuration)
-	if err != nil {
-		log.Printf("[WARN] /: unable to load candles: %v", err)
-		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	result := struct {
-		TopFiles []volumeStats
-		TopNodes []volumeStats
-		From, To string
-	}{
-		getTop("files", candles, 10),
-		getTop("nodes", candles, 10),
-		from,
-		to,
-	}
-
-	t := template.Must(template.ParseFiles(fmt.Sprintf("%vwebapp/dashboard.html.tpl", s.webappPrefix)))
-	err = t.Execute(w, result)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("unable to execute template: %v", err), http.StatusInternalServerError)
-		log.Printf("[WARN] dashboard: unable to execute template: %v", err)
-		return
-	}
-	render.Status(r, http.StatusOK)
-}
-
-// GET /file_stats
-func (s Server) getFileStats(w http.ResponseWriter, r *http.Request) {
-	filename := r.URL.Query().Get("filename")
-	if filename == "" {
-		http.Error(w, fmt.Sprint("'filename' parameter is required"), http.StatusUnprocessableEntity)
-		return
-	}
-	from := r.URL.Query().Get("from")
-	to := r.URL.Query().Get("to")
-	fromTime, toTime, aggDuration := calculateTimePeriod(from, to)
-	candles, err := loadCandles(s.Engine, fromTime, toTime, aggDuration)
-	if err != nil {
-		log.Printf("[WARN] /file_stats: unable to load candles: %v", err)
-		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	result := struct {
-		Filename string
-		Candles  []store.Candle
-		From, To string
-	}{
-		filename,
-		candles,
-		from,
-		to,
-	}
-
-	t := template.Must(template.ParseFiles(fmt.Sprintf("%vwebapp/file_stats.html.tpl", s.webappPrefix)))
-	err = t.Execute(w, result)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("unable to execute template: %v", err), http.StatusInternalServerError)
-		log.Printf("[WARN] dashboard: unable to execute template: %v", err)
-		return
-	}
-	render.Status(r, http.StatusOK)
-}
-
-// GET /chart
-func (s Server) drawChart(w http.ResponseWriter, r *http.Request) {
-	fromTime, toTime, aggDuration := calculateTimePeriod(
-		r.URL.Query().Get("from"),
-		r.URL.Query().Get("to"),
-	)
-	candles, err := loadCandles(s.Engine, fromTime, toTime, aggDuration)
-	if err != nil {
-		log.Printf("[WARN] dashboard: unable to load candles: %v", err)
-		http.Error(w, fmt.Sprintf("unable to load candles: %v", err), http.StatusInternalServerError)
-		return
-	}
-	qType := r.URL.Query().Get("type")
-	filename := r.URL.Query().Get("filename")
-	series := prepareSeries(candles, qType, filename)
-
-	graph := chart.Chart{
-		XAxis: chart.XAxis{
-			Style:          chart.StyleShow(),
-			ValueFormatter: chart.TimeValueFormatterWithFormat(time.RFC3339),
-		},
-		YAxis: chart.YAxis{
-			Style:          chart.StyleShow(),
-			ValueFormatter: valueFormatter,
-		},
-		Background: chart.Style{
-			Padding: chart.Box{
-				Top:  20,
-				Left: 20,
-			},
-		},
-		Series: series,
-	}
-
-	graph.Elements = []chart.Renderable{
-		chart.Legend(&graph),
-	}
-
-	w.Header().Set("Content-Type", "image/png")
-	err = graph.Render(chart.PNG, w)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("unable to render graph: %v", err), http.StatusBadRequest)
-		log.Printf("[WARN] dashboard: unable to render graph: %v", err)
-	}
 }
 
 // GET /api/candle
@@ -214,15 +98,24 @@ func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 		}
 		toTime = t
 	}
-	duration := time.Minute
+	aggDuration := toTime.Sub(fromTime).Truncate(time.Second) / 100
 	if a := r.URL.Query().Get("aggregate"); a != "" {
-		duration, err = time.ParseDuration(a)
+		aggDuration, err = time.ParseDuration(a)
 		if err != nil {
 			sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'aggregate' field")
 			return
 		}
 	}
-	candles, err := loadCandles(s.Engine, fromTime, toTime, duration)
+	if n := r.URL.Query().Get("max_points"); n != "" {
+		i, err := strconv.ParseUint(n, 10, 8)
+		if err != nil {
+			sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'max_points' field")
+			return
+		}
+		aggDuration = toTime.Sub(fromTime).Truncate(time.Second) / time.Duration(i)
+	}
+
+	candles, err := loadCandles(s.Engine, fromTime, toTime, aggDuration)
 	if err != nil {
 		sendErrorJSON(w, r, http.StatusBadRequest, err, "can't load candles")
 		return
@@ -265,4 +158,15 @@ func (s Server) insert(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, struct {
 		Result string `json:"result"`
 	}{"ok"})
+}
+
+// fileServer conveniently sets up a http.fileServer handler to serve
+// static files from a http.FileSystem.
+func fileServer(r chi.Router, path string, root http.FileSystem) {
+	fs := http.StripPrefix(path, http.FileServer(root))
+	path += "*"
+
+	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
+		fs.ServeHTTP(w, r)
+	})
 }

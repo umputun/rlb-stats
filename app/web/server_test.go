@@ -45,8 +45,6 @@ func TestSendErrorJSON(t *testing.T) {
 func TestServerUI(t *testing.T) {
 	goodServer, goodTeardown := startupT(t, false)
 	defer goodTeardown()
-	badServer, badTeardown := startupT(t, true)
-	defer badTeardown()
 
 	var testData = []struct {
 		ts           *httptest.Server
@@ -54,12 +52,6 @@ func TestServerUI(t *testing.T) {
 		responseCode int
 	}{
 		{ts: goodServer, url: "/", responseCode: http.StatusOK},
-		{ts: goodServer, url: "/file_stats", responseCode: http.StatusUnprocessableEntity},
-		{ts: goodServer, url: "/file_stats?filename=test", responseCode: http.StatusOK},
-		{ts: goodServer, url: "/chart", responseCode: http.StatusBadRequest},
-		{ts: badServer, url: "/chart", responseCode: http.StatusInternalServerError},
-		{ts: badServer, url: "/", responseCode: http.StatusInternalServerError},
-		{ts: badServer, url: "/file_stats?filename=test", responseCode: http.StatusInternalServerError},
 	}
 	client := http.Client{}
 	for i, x := range testData {
@@ -103,11 +95,13 @@ func TestServerAPI(t *testing.T) {
 			result: "{\"details\":\"can't parse 'to' field\",\"error\":\"parsing time \\\"bad\\\" as \\\"2006-01-02T15:04:05Z07:00\\\": cannot parse \\\"bad\\\" as \\\"2006\\\"\"}\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&aggregate=bad", startTime), responseCode: http.StatusExpectationFailed,
 			result: "{\"details\":\"can't parse 'aggregate' field\",\"error\":\"time: invalid duration bad\"}\n"},
+		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=256", startTime), responseCode: http.StatusExpectationFailed,
+			result: "{\"details\":\"can't parse 'max_points' field\",\"error\":\"strconv.ParseUint: parsing \\\"256\\\": value out of range\"}\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v", startTime, startTime), responseCode: http.StatusOK,
 			result: "[]\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v", startTime), responseCode: http.StatusOK,
 			candles: []store.Candle{storedCandle}},
-		{ts: badServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v&aggregate=5m", startTime, url.QueryEscape(endTime)), responseCode: http.StatusBadRequest,
+		{ts: badServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v&aggregate=5m&max_points=10", startTime, url.QueryEscape(endTime)), responseCode: http.StatusBadRequest,
 			result: "{\"details\":\"can't load candles\",\"error\":\"test error\"}\n"},
 		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
 			result: "{\"details\":\"Problem decoding JSON\",\"error\":\"EOF\"}\n"},
