@@ -32,7 +32,7 @@ function sortFilesOrNodes(arr) {
 }
 
 async function fetchData(queryParams) {
-  const url = `/api/candle?from=${queryParams.from.toISOString()}&to=${queryParams.to.toISOString()}`;
+  const url = `api/candle?from=${queryParams.from.toISOString()}&to=${queryParams.to.toISOString()}`;
   try {
     const response = await fetch(url);
     if (!response.ok) {
