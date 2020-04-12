@@ -90,13 +90,13 @@ if (drawChart === drawEChart) {
   window.addEventListener("resize", redraw);
 }
 window.onpopstate = () => {
-  const minutes =
-    new URL(location.href).searchParams.get("minutes") || defaultMinutes;
+  const minutes = new URL(location.href).searchParams.get("minutes") || defaultMinutes;
   drawPage(minutes, drawChart).catch(e => {
     console.error(e);
   });
 };
 
-drawPage(defaultMinutes, drawChart).catch(e => {
+const minutes = new URL(location.href).searchParams.get("minutes") || defaultMinutes;
+drawPage(minutes, drawChart).catch(e => {
   console.error(e);
 });
