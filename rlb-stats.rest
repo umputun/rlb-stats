@@ -58,10 +58,8 @@ POST http://127.0.0.1:8080/api/insert
 Content-Type: application/json
 
 {
-	"from_ip": "172.21.0.1",
-	"ts": "2021-03-24T08:20:00Z",
-	"file_name": "rtfiles/rt_podcast659.mp3",
-	"dest": "n3.radio-t.com"
+    "from_ip": "172.21.0.1",
+    "ts": "2021-03-24T08:20:00Z",
+    "file_name": "rtfiles/rt_podcast659.mp3",
+    "dest": "n3.radio-t.com"
 }
-
-###

@@ -63,7 +63,7 @@ func TestServerUI(t *testing.T) {
 			b, err := client.Do(req)
 			require.NoError(t, err, i)
 			body, err := ioutil.ReadAll(b.Body)
-			b.Body.Close()
+			require.NoError(t, b.Body.Close())
 			require.NoError(t, err, i)
 			assert.Equal(t, x.responseCode, b.StatusCode, string(body))
 		})
