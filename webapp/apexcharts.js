@@ -6,7 +6,7 @@ export function drawChart({ data, container, title }) {
   const series = data.map(datum => {
     return { name: datum[dataType], data: datum.data };
   });
-  var options = {
+  const options = {
     chart: {
       type: "line",
       height: 700
@@ -36,7 +36,7 @@ export function drawChart({ data, container, title }) {
       },
       offsetY: 10,
       height: 150,
-      formatter: function(seriesName, opts) {
+      formatter: function (seriesName, opts) {
         return [
           `${seriesName}:`,
           opts.w.globals.series[opts.seriesIndex].reduce(
@@ -60,7 +60,7 @@ export function drawChart({ data, container, title }) {
             }
           },
           title: {
-            style: { fontSize: "12px" }
+            style: {fontSize: "12px"}
           },
           chart: {
             height: 400

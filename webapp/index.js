@@ -1,13 +1,8 @@
-import {
-  createQueryParams,
-  dateTimeOptions,
-  getReadableDuration,
-  loadData
-} from "./data.js";
-import { drawChart as drawAnyChart } from "./anycharts.js";
+import {createQueryParams, dateTimeOptions, getReadableDuration, loadData} from "./data.js";
+import {drawChart as drawAnyChart} from "./anycharts.js";
 import {drawChart as drawTauChart} from './taucharts.js';
-import { drawChart as drawEChart, redraw } from "./echarts.js";
-import { drawChart as drawApexChart } from "./apexcharts.js";
+import {drawChart as drawEChart, redraw} from "./echarts.js";
+import {drawChart as drawApexChart} from "./apexcharts.js";
 
 // default charts are for last 24 hours
 const defaultMinutes = 24 * 60;
@@ -26,7 +21,7 @@ function getDrawFunction() {
     e: drawEChart,
     apex: drawApexChart
   };
-  return map[chartLibrary] || drawTauChart;
+  return map[chartLibrary] || drawApexChart;
 }
 
 const drawChart = getDrawFunction();
@@ -74,7 +69,7 @@ buttons.addEventListener("click", event => {
     const minutes = event.target.dataset.minutes;
     const url = new URL(location.href);
     url.searchParams.set("minutes", minutes);
-    window.history.pushState({}, "", url);
+    window.history.pushState({}, "", url.toString());
     drawPage(minutes, drawChart).catch(e => {
       console.error(e);
     });
@@ -91,7 +86,7 @@ chartsSelect.addEventListener("change", e => {
   location.href = url.toString();
 });
 
-if (drawChart == drawEChart) {
+if (drawChart === drawEChart) {
   window.addEventListener("resize", redraw);
 }
 window.onpopstate = () => {

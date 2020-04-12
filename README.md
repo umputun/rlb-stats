@@ -24,7 +24,7 @@ Open [http://127.0.0.1:8080/api/candle](http://127.0.0.1:8080/api/candle?from=20
 endpoint from to see all aggregated logs since the start of the container.
 
 ### Dashboard
-Open http://127.0.0.1:8080/?from=20m URL to see dashboard with statistics
+Open http://127.0.0.1:8080/ to see dashboard with statistics
 
 ### Application parameters
 
