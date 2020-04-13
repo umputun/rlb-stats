@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	bolt "github.com/etcd-io/bbolt"
 	log "github.com/go-pkgz/lgr"
+	bolt "go.etcd.io/bbolt"
 )
 
 var bucket = []byte("stats")

@@ -16,11 +16,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: debug if needed
-      run: |
-        export DEBUG=${DEBUG:-false}
-        if [[ "$DEBUG" == "true" ]]; then
-          env
-        fi
+      run: if [[ "$DEBUG" == "true" ]]; then env; fi
       env:
         DEBUG: ${{secrets.DEBUG}}
 
@@ -38,7 +34,7 @@ jobs:
 
     - name: install golangci-lint
       run: |
-        curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $GITHUB_WORKSPACE v1.23.1
+        curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $GITHUB_WORKSPACE v1.23.8
 
     - name: install goveralls
       run: GO111MODULE=off go get -u -v github.com/mattn/goveralls

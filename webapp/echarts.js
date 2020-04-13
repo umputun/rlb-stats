@@ -6,7 +6,7 @@ export function drawChart({ data, container, title }) {
     charts[dataType] = echarts.init(container);
   }
   // specify chart configuration item and data
-  var option = {
+  const option = {
     title: {
       text: title
     },
@@ -18,14 +18,14 @@ export function drawChart({ data, container, title }) {
     tooltip: {},
     legend: {
       type: "scroll",
-      data: (function() {
+      data: (function () {
         return data.map(datum => datum[dataType]);
       })(),
       bottom: 0,
       orient: "vertical",
       height: "40%"
     },
-    xAxis: { type: "time" },
+    xAxis: {type: "time"},
     yAxis: {},
     series: data.map(datum => {
       return {
