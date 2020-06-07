@@ -25,9 +25,9 @@ func (p *Aggregator) Store(newEntry LogRecord) (minuteCandle Candle, ok bool) {
 		0,
 		newEntry.Date.Location())
 
-	if len(p.entries) > 0 && !newEntry.Date.Equal(p.entries[len(p.entries)-1].Date) { // if there are existing entries and date changed
-		minuteCandle = NewCandle()                  // then all previous entries have same date precise to the minute and will be written to single candle
-		var deduplicate = make(map[string]struct{}) // deduplicate store ip-file map
+	if len(p.entries) != 0 && !newEntry.Date.Equal(p.entries[len(p.entries)-1].Date) { // if there are existing entries and date changed
+		minuteCandle = NewCandle()              // then all previous entries have same date precise to the minute and will be written to single candle
+		var deduplicate = map[string]struct{}{} // deduplicate store ip-file map
 		for _, entry := range p.entries {
 			_, duplicate := deduplicate[fmt.Sprintf("%s-%s", entry.FileName, entry.FromIP)]
 			if !duplicate {
