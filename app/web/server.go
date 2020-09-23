@@ -47,7 +47,7 @@ func (s *Server) routes() chi.Router {
 
 	r.Use(middleware.Logger, middleware.Recoverer)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Timeout(5*60 * time.Second))
+	r.Use(middleware.Timeout(5 * 60 * time.Second))
 	r.Use(rest.AppInfo("rlb-stats", "umputun", s.Version), rest.Ping)
 
 	r.Group(func(rUI chi.Router) {
