@@ -2,7 +2,7 @@ run:
   tests: false
   timeout: 5m
   output:
-    format: tab
+    format: github-actions
   skip-dirs:
     - vendor
 linters:
@@ -22,7 +22,6 @@ linters:
   - goimports
   - golint
   - goprintffuncname
-  - gochecknoinits
   - gosec
   - gosimple
   - govet
