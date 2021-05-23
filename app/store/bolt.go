@@ -79,3 +79,33 @@ func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err erro
 	})
 	return result, err
 }
+
+// LoadStream get Candles by period and returns as async stream
+func (s *Bolt) LoadStream(periodStart, periodEnd time.Time) chan Candle {
+	result := make(chan Candle)
+
+	go func() {
+		defer close(result)
+		err := s.db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket(bucket)
+			c := b.Cursor()
+
+			min := []byte(fmt.Sprintf("%d", periodStart.Unix()))
+			max := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
+
+			for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
+				newCandle := Candle{}
+				if err := json.Unmarshal(v, &newCandle); err != nil {
+					return err
+				}
+				result <- newCandle
+			}
+			return nil
+		})
+		if err != nil {
+			log.Printf("[WARN] can't get candles, %v", err)
+		}
+	}()
+
+	return result
+}
