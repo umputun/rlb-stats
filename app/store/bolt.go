@@ -39,10 +39,8 @@ func NewBolt(dbFile string) (*Bolt, error) {
 // Save Candles with starting minute time.Unix() as a key for bolt range query
 func (s *Bolt) Save(candle Candle) (err error) {
 	key := fmt.Sprintf("%d", candle.StartMinute.Unix())
-	total := 0
 	err = s.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucket)
-		total = b.Stats().KeyN
 		jdata, jerr := json.Marshal(candle)
 		if jerr != nil {
 			return jerr
@@ -52,7 +50,7 @@ func (s *Bolt) Save(candle Candle) (err error) {
 	if err != nil {
 		return err
 	}
-	log.Printf("[DEBUG] saved candle, StartMinute=%v, total=%d", candle.StartMinute.Unix(), total+1)
+	log.Printf("[DEBUG] saved candle, StartMinute=%v", candle.StartMinute.Unix())
 	return nil
 }
 
