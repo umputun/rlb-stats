@@ -4,6 +4,7 @@ FROM umputun/baseimage:buildgo-latest as build
 ARG CI
 ARG GIT_BRANCH
 ARG SKIP_TEST
+ARG GITHUB_SHA
 
 ENV GOFLAGS="-mod=vendor" GO111MODULE=on
 
