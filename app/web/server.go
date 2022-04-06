@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/didip/tollbooth"
+	"github.com/didip/tollbooth/v6"
 	"github.com/didip/tollbooth_chi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -77,7 +77,7 @@ func sendErrorJSON(w http.ResponseWriter, r *http.Request, code int, err error, 
 	render.JSON(w, r, JSON{"error": err.Error(), "details": details})
 }
 
-// GET /api/candle
+// GET /api/candle?from=2022-04-06T05:06:17.041Z&to=2022-04-06T06:06:17.041Z
 func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	if from == "" {
@@ -155,9 +155,7 @@ func (s Server) insert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.JSON(w, r, struct {
-		Result string `json:"result"`
-	}{"ok"})
+	render.JSON(w, r, rest.JSON{"result": "ok"})
 }
 
 // fileServer conveniently sets up a http.fileServer handler to serve
