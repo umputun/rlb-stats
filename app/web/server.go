@@ -77,7 +77,7 @@ func sendErrorJSON(w http.ResponseWriter, r *http.Request, code int, err error, 
 	render.JSON(w, r, JSON{"error": err.Error(), "details": details})
 }
 
-// GET /api/candle?from=2022-04-06T05:06:17.041Z&to=2022-04-06T06:06:17.041Z
+// GET /api/candle?from=2022-04-06T05:06:17.041Z&to=2022-04-06T06:06:17.041Z&max_points=100
 func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	if from == "" {
