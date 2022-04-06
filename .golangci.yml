@@ -39,5 +39,4 @@ linters:
   - unparam
   - unused
   - varcheck
-  - whitespace
   disable-all: true
