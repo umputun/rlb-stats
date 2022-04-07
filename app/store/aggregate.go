@@ -13,32 +13,28 @@ type Aggregator struct {
 
 // Store LogRecord into temp storage and return Candle when minute change,
 // counting multiple entries with same FromIP and FileName as single data point
-func (p *Aggregator) Store(newEntry LogRecord) (minuteCandle Candle, ok bool) {
-	// drop seconds and nanoseconds from log date
-	newEntry.Date = time.Date(
-		newEntry.Date.Year(),
-		newEntry.Date.Month(),
-		newEntry.Date.Day(),
-		newEntry.Date.Hour(),
-		newEntry.Date.Minute(),
-		0,
-		0,
-		newEntry.Date.Location())
+func (p *Aggregator) Store(entry LogRecord) (minuteCandle Candle, ok bool) {
 
-	if len(p.entries) != 0 && !newEntry.Date.Equal(p.entries[len(p.entries)-1].Date) { // if there are existing entries and date changed
-		minuteCandle = NewCandle()              // then all previous entries have same date precise to the minute and will be written to single candle
+	// drop seconds and nanoseconds from log date to match candle's 1min resolution
+	entry.Date = time.Date(entry.Date.Year(), entry.Date.Month(), entry.Date.Day(), entry.Date.Hour(), entry.Date.Minute(),
+		0, 0, entry.Date.Location())
+
+	// if there are existing entries and date changed
+	if len(p.entries) != 0 && !entry.Date.Equal(p.entries[len(p.entries)-1].Date) {
+		// then all previous entries have same date precise to the minute and will be written to single candle
+		minuteCandle = NewCandle()
 		var deduplicate = map[string]struct{}{} // deduplicate store ip-file map
 		for _, entry := range p.entries {
-			_, duplicate := deduplicate[fmt.Sprintf("%s-%s", entry.FileName, entry.FromIP)]
-			if !duplicate {
-				minuteCandle.Update(entry)
-				deduplicate[fmt.Sprintf("%s-%s", entry.FileName, entry.FromIP)] = struct{}{}
+			if _, dup := deduplicate[fmt.Sprintf("%s-%s", entry.FileName, entry.FromIP)]; dup {
+				continue
 			}
+			minuteCandle.Update(entry)
+			deduplicate[fmt.Sprintf("%s-%s", entry.FileName, entry.FromIP)] = struct{}{}
 		}
 		ok = true                 // candle is ready to be written
 		p.entries = []LogRecord{} // clean written entries
 	}
-	p.entries = append(p.entries, newEntry)
 
+	p.entries = append(p.entries, entry)
 	return minuteCandle, ok
 }

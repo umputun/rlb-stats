@@ -46,7 +46,9 @@ func (c *Candle) Update(l LogRecord) {
 		if !ok {
 			node = NewInfo()
 		}
-		node.Files[l.FileName]++
+		if nodeName == "all" { // we keep all files in "all" node only
+			node.Files[l.FileName]++
+		}
 		node.Volume++
 		c.Nodes[nodeName] = node
 	}
