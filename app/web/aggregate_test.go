@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -126,10 +127,10 @@ var resultCandles = map[int][]store.Candle{
 
 func TestAggregation(t *testing.T) {
 	for i, result := range resultCandles {
-		testSlice := aggregateCandles(testCandles, time.Duration(i)*time.Minute)
+		testSlice := aggregateCandles(context.Background(), testCandles, time.Duration(i)*time.Minute)
 		assert.EqualValues(t, result, testSlice, "candle aggregate for %v minutes match with expected output", i)
 	}
 	// test less than 1 minute period which should have same output as 1 minute aggregation
-	testSlice := aggregateCandles(testCandles, time.Nanosecond)
+	testSlice := aggregateCandles(context.Background(), testCandles, time.Nanosecond)
 	assert.EqualValues(t, testCandles, testSlice, "candle aggregate for 1 nanosecond match with expected output")
 }
