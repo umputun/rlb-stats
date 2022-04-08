@@ -1,13 +1,14 @@
 package web
 
 import (
+	"context"
 	"time"
 
 	"github.com/umputun/rlb-stats/app/store"
 )
 
 // aggregateCandles takes candles from input, and aggregate them by aggInterval truncated to minutes
-func aggregateCandles(candles []store.Candle, aggInterval time.Duration) []store.Candle {
+func aggregateCandles(ctx context.Context, candles []store.Candle, aggInterval time.Duration) []store.Candle {
 	// initialize result in this way to return empty slice instead of nil for empty result
 	result := []store.Candle{}
 
@@ -28,6 +29,11 @@ func aggregateCandles(candles []store.Candle, aggInterval time.Duration) []store
 	}
 
 	for aggTime := firstDate; aggTime.Before(lastDate.Add(aggInterval)); aggTime = aggTime.Add(aggInterval) {
+		select {
+		case <-ctx.Done():
+			return result
+		default:
+		}
 		minuteCandle := store.NewCandle()
 		minuteCandle.StartMinute = aggTime
 		for _, c := range candles {

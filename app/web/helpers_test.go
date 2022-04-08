@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -15,20 +16,21 @@ import (
 func TestLoadCandles(t *testing.T) {
 	e, teardown := startupEngine(t, false)
 	defer teardown()
+	ctx := context.Background()
 
 	// load empty results
-	result, err := loadCandles(e, time.Time{}, time.Time{}.Add(time.Minute), time.Nanosecond)
+	result, err := loadCandles(ctx, e, time.Time{}, time.Time{}.Add(time.Minute), time.Nanosecond)
 	assert.Nil(t, err)
 	assert.Equal(t, []store.Candle{}, result)
 
 	// load non-empty results
-	result, err = loadCandles(e, time.Unix(0, 0), time.Unix(0, 0).Add(time.Minute), time.Nanosecond)
+	result, err = loadCandles(ctx, e, time.Unix(0, 0), time.Unix(0, 0).Add(time.Minute), time.Nanosecond)
 	assert.Nil(t, err)
 	assert.Equal(t, []store.Candle{storedCandle}, result)
 
 	badE, _ := startupEngine(t, true)
 	// load from non-existent files
-	result, err = loadCandles(badE, time.Unix(0, 0), time.Unix(0, 0).Add(time.Minute), time.Nanosecond)
+	result, err = loadCandles(ctx, badE, time.Unix(0, 0), time.Unix(0, 0).Add(time.Minute), time.Nanosecond)
 	assert.Nil(t, result)
 	assert.EqualError(t, err, "test error")
 }
@@ -122,6 +124,6 @@ func (m MockDB) Save(candle store.Candle) error {
 	return errors.New("test error")
 }
 
-func (m MockDB) Load(periodStart, periodEnd time.Time) ([]store.Candle, error) {
+func (m MockDB) Load(ctx context.Context, periodStart, periodEnd time.Time) ([]store.Candle, error) {
 	return nil, errors.New("test error")
 }

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -22,7 +23,7 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	testCandle.StartMinute = time.Unix(0, 0)
 
 	assert.Nil(t, s.Save(testCandle), "saved fine")
-	savedCandle, err := s.Load(time.Unix(0, 0), time.Unix(0, 0).Add(time.Hour))
+	savedCandle, err := s.Load(context.Background(), time.Unix(0, 0), time.Unix(0, 0).Add(time.Hour))
 	assert.Nil(t, err, "key found")
 	require.NotEqual(t, []Candle{}, savedCandle, "key found")
 	assert.EqualValues(t, testCandle, savedCandle[0], "matches loaded msg")
@@ -54,7 +55,7 @@ func TestBolt_LoadStream(t *testing.T) {
 	testCandle.StartMinute = time.Unix(200, 0)
 	assert.Nil(t, s.Save(testCandle), "saved fine")
 
-	ch := s.LoadStream(time.Unix(0, 0), time.Unix(0, 0).Add(time.Hour))
+	ch := s.LoadStream(context.Background(), time.Unix(0, 0), time.Unix(0, 0).Add(time.Hour))
 	res := []Candle{}
 	for c := range ch {
 		res = append(res, c)
