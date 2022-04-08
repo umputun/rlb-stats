@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -55,7 +56,7 @@ func (s *Bolt) Save(candle Candle) (err error) {
 }
 
 // Load Candles by period
-func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err error) {
+func (s *Bolt) Load(ctx context.Context, periodStart, periodEnd time.Time) (result []Candle, err error) {
 	result = []Candle{}
 	err = s.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucket)
@@ -65,6 +66,11 @@ func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err erro
 		max := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
 
 		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
 			newCandle := Candle{}
 			err = json.Unmarshal(v, &newCandle)
 			if err != nil {
@@ -79,7 +85,7 @@ func (s *Bolt) Load(periodStart, periodEnd time.Time) (result []Candle, err erro
 }
 
 // LoadStream get Candles by period and returns as async stream
-func (s *Bolt) LoadStream(periodStart, periodEnd time.Time) chan Candle {
+func (s *Bolt) LoadStream(ctx context.Context, periodStart, periodEnd time.Time) chan Candle {
 	result := make(chan Candle)
 
 	go func() {
@@ -92,6 +98,11 @@ func (s *Bolt) LoadStream(periodStart, periodEnd time.Time) chan Candle {
 			max := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
 
 			for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+				}
 				newCandle := Candle{}
 				if err := json.Unmarshal(v, &newCandle); err != nil {
 					return err

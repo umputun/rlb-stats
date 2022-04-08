@@ -115,7 +115,7 @@ func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 		aggDuration = toTime.Sub(fromTime).Truncate(time.Second) / time.Duration(i)
 	}
 
-	candles, err := loadCandles(s.Engine, fromTime, toTime, aggDuration)
+	candles, err := loadCandles(r.Context(), s.Engine, fromTime, toTime, aggDuration)
 	if err != nil {
 		sendErrorJSON(w, r, http.StatusBadRequest, err, "can't load candles")
 		return
