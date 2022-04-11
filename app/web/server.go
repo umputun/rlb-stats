@@ -49,6 +49,7 @@ func (s *Server) routes() chi.Router {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Timeout(5 * 60 * time.Second))
 	r.Use(rest.AppInfo("rlb-stats", "umputun", s.Version), rest.Ping)
+	r.Mount("/debug", middleware.Profiler())
 
 	r.Group(func(rUI chi.Router) {
 		l := logger.New(logger.Log(log.Default()), logger.Prefix("[INFO]"))
