@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/didip/tollbooth/v6"
+	"github.com/didip/tollbooth/v7"
 	"github.com/didip/tollbooth_chi"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -38,8 +38,12 @@ type JSON map[string]interface{}
 // Run starts a web-server
 func (s *Server) Run() {
 	log.Printf("[INFO] activate web server on port %v", s.Port)
-	err := http.ListenAndServe(fmt.Sprintf("%v:%v", s.address, s.Port), s.routes())
-	log.Printf("[WARN] http server terminated, %s", err)
+	srv := http.Server{
+		Addr:              fmt.Sprintf("%v:%v", s.address, s.Port),
+		Handler:           s.routes(),
+		ReadHeaderTimeout: time.Second * 5,
+	}
+	log.Printf("[WARN] http server terminated, %s", srv.ListenAndServe())
 }
 
 func (s *Server) routes() chi.Router {
