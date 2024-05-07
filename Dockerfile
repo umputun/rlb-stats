@@ -1,12 +1,13 @@
 # Build
 FROM umputun/baseimage:buildgo-latest as build
 
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#docker
+LABEL org.opencontainers.image.source="https://github.com/umputun/rlb-stats"
+
 ARG CI
 ARG GIT_BRANCH
 ARG SKIP_TEST
 ARG GITHUB_SHA
-
-ENV GOFLAGS="-mod=vendor" GO111MODULE=on
 
 ADD . /app
 WORKDIR /app
@@ -17,7 +18,6 @@ RUN \
         go test -timeout=30s  ./... && \
         golangci-lint run --config ./.golangci.yml ./... ; \
     else echo "skip tests and linter" ; fi
-
 
 RUN \
     if [ -z "$CI" ] ; then \
