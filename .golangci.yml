@@ -1,34 +1,29 @@
 run:
   tests: false
   timeout: 5m
-  output:
-    format: github-actions
-  skip-dirs:
-    - vendor
 linters:
   enable:
   - bodyclose
   - dogsled
   - dupl
-  - gas
   - errcheck
+  - exportloopref
   - gochecknoinits
   - goconst
   - gocritic
   - gocyclo
   - gofmt
   - goimports
-  - revive
   - goprintffuncname
+  - gosec
   - gosec
   - gosimple
   - govet
   - ineffassign
   - misspell
-  - megacheck
   - nakedret
+  - revive
   - rowserrcheck
-  - exportloopref
   - staticcheck
   - stylecheck
   - typecheck
@@ -36,3 +31,6 @@ linters:
   - unparam
   - unused
   disable-all: true
+issues:
+  exclude-dirs:
+    - vendor
