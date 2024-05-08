@@ -1,9 +1,6 @@
 # Build
 FROM umputun/baseimage:buildgo-latest as build
 
-# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#docker
-LABEL org.opencontainers.image.source="https://github.com/umputun/rlb-stats"
-
 ARG CI
 ARG GIT_BRANCH
 ARG SKIP_TEST
@@ -29,6 +26,10 @@ RUN \
 
 # Run
 FROM umputun/baseimage:app-latest
+
+LABEL org.opencontainers.image.authors="Dmitry Verkhoturov <paskal.07@gmail.com>"
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#docker
+LABEL org.opencontainers.image.source="https://github.com/umputun/rlb-stats"
 
 RUN apk add --update ca-certificates && update-ca-certificates
 
