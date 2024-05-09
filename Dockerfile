@@ -28,7 +28,7 @@ RUN \
 FROM umputun/baseimage:app-latest
 
 LABEL org.opencontainers.image.authors="Dmitry Verkhoturov <paskal.07@gmail.com>"
-# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#docker
+# enables automatic changelog generation by tools like Dependabot
 LABEL org.opencontainers.image.source="https://github.com/umputun/rlb-stats"
 
 RUN apk add --update ca-certificates && update-ca-certificates
