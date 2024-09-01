@@ -96,7 +96,7 @@ func TestServerAPI(t *testing.T) {
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&aggregate=bad", startTime), responseCode: http.StatusExpectationFailed,
 			result: `{"details":"can't parse 'aggregate' field","error":"time: invalid duration \"bad\""}` + "\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=256", startTime), responseCode: http.StatusExpectationFailed,
-			result: "{\"details\":\"can't parse 'max_points' field\",\"error\":\"strconv.ParseUint: parsing \\\"256\\\": value out of range\"}\n"},
+			result: "{\"details\":\"can't parse 'max_points' field\",\"error\":\"strconv.ParseInt: parsing \\\"256\\\": value out of range\"}\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v", startTime, startTime), responseCode: http.StatusOK,
 			result: "[]\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v", startTime), responseCode: http.StatusOK,
