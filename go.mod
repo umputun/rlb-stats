@@ -10,7 +10,7 @@ require (
 	github.com/go-pkgz/lgr v0.11.1
 	github.com/go-pkgz/rest v1.19.0
 	github.com/jessevdk/go-flags v1.6.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.etcd.io/bbolt v1.3.11
 )
 
