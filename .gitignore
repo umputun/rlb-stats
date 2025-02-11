@@ -3,6 +3,7 @@
 *.dll
 *.so
 *.dylib
+rlb-stats
 
 # Test binary, build with `go test -c`
 *.test
