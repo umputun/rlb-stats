@@ -62,10 +62,10 @@ func (s *Bolt) Load(ctx context.Context, periodStart, periodEnd time.Time) (resu
 		b := tx.Bucket(bucket)
 		c := b.Cursor()
 
-		min := []byte(fmt.Sprintf("%d", periodStart.Unix()))
-		max := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
+		minimum := []byte(fmt.Sprintf("%d", periodStart.Unix()))
+		maximum := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
 
-		for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
+		for k, v := c.Seek(minimum); k != nil && bytes.Compare(k, maximum) <= 0; k, v = c.Next() {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
@@ -94,10 +94,10 @@ func (s *Bolt) LoadStream(ctx context.Context, periodStart, periodEnd time.Time)
 			b := tx.Bucket(bucket)
 			c := b.Cursor()
 
-			min := []byte(fmt.Sprintf("%d", periodStart.Unix()))
-			max := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
+			minimum := []byte(fmt.Sprintf("%d", periodStart.Unix()))
+			maximum := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
 
-			for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
+			for k, v := c.Seek(minimum); k != nil && bytes.Compare(k, maximum) <= 0; k, v = c.Next() {
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
