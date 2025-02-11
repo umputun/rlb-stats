@@ -52,6 +52,10 @@ func TestServerUI(t *testing.T) {
 		responseCode int
 	}{
 		{ts: goodServer, url: "/", responseCode: http.StatusOK},
+		{ts: goodServer, url: "/index.js", responseCode: http.StatusOK},
+		{ts: goodServer, url: "/favicon.ico", responseCode: http.StatusOK},
+		{ts: goodServer, url: "/data.js", responseCode: http.StatusOK},
+		{ts: goodServer, url: "/index.html", responseCode: http.StatusOK},
 	}
 	client := http.Client{}
 	for i, x := range testData {

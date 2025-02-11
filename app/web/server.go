@@ -82,7 +82,7 @@ func sendErrorJSON(w http.ResponseWriter, r *http.Request, code int, err error, 
 }
 
 // GET /api/candle?from=2022-04-06T05:06:17.041Z&to=2022-04-06T06:06:17.041Z&max_points=100&files=10
-func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	if from == "" {
 		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("no 'from' field passed"), "")
@@ -138,7 +138,7 @@ func (s Server) getCandle(w http.ResponseWriter, r *http.Request) {
 }
 
 // POST /api/insert
-func (s Server) insert(w http.ResponseWriter, r *http.Request) {
+func (s *Server) insert(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var l store.LogRecord
 	err := decoder.Decode(&l)
