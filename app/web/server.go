@@ -10,14 +10,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/didip/tollbooth/v7"
-	"github.com/didip/tollbooth_chi"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	log "github.com/go-pkgz/lgr"
 	"github.com/go-pkgz/rest"
 	"github.com/go-pkgz/rest/logger"
+	"github.com/go-pkgz/routegroup"
 
 	"github.com/umputun/rlb-stats/app/store"
 )
@@ -42,33 +39,39 @@ func (s *Server) Run() {
 		Addr:              fmt.Sprintf("%v:%v", s.address, s.Port),
 		Handler:           s.routes(),
 		ReadHeaderTimeout: time.Second * 5,
+		ReadTimeout:       5 * time.Minute,
+		WriteTimeout:      5 * time.Minute,
 	}
 	log.Printf("[WARN] http server terminated, %s", srv.ListenAndServe())
 }
 
-func (s *Server) routes() chi.Router {
-	r := chi.NewRouter()
+func (s *Server) routes() http.Handler {
+	r := routegroup.New(http.NewServeMux())
 
-	r.Use(middleware.Logger, middleware.Recoverer)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Timeout(5 * 60 * time.Second))
+	// Common middleware
+	r.Use(rest.Recoverer(log.Default()))
+	r.Use(rest.RealIP)
 	r.Use(rest.AppInfo("rlb-stats", "umputun", s.Version), rest.Ping)
 
-	r.Group(func(rUI chi.Router) {
-		l := logger.New(logger.Log(log.Default()), logger.Prefix("[INFO]"))
-		rUI.Use(l.Handler)
-		rUI.Use(tollbooth_chi.LimitHandler(tollbooth.NewLimiter(10, nil)))
+	// UI routes group
+	infoLogger := logger.New(logger.Log(log.Default()), logger.Prefix("[INFO]"))
+	r.Route(func(rUI *routegroup.Bundle) {
+		rUI.Use(infoLogger.Handler)
+		rUI.Use(rest.Throttle(10))
+
 		workDir, _ := os.Getwd()
 		filesDir := filepath.Join(workDir, s.webappPrefix+"webapp")
-		fileServer(rUI, "/", http.Dir(filesDir))
+		rUI.HandleFiles("/", http.Dir(filesDir))
 	})
 
-	r.Group(func(rAPI chi.Router) {
-		l := logger.New(logger.Log(log.Default()), logger.Prefix("[DEBUG]"))
-		rAPI.Use(l.Handler)
-		rAPI.Route("/api", func(r chi.Router) {
-			r.With(tollbooth_chi.LimitHandler(tollbooth.NewLimiter(10, nil))).Get("/candle", s.getCandle)
-			r.With(tollbooth_chi.LimitHandler(tollbooth.NewLimiter(100, nil))).Post("/insert", s.insert)
+	// API routes group
+	debugLogger := logger.New(logger.Log(log.Default()), logger.Prefix("[DEBUG]"))
+	r.Route(func(rAPI *routegroup.Bundle) {
+		rAPI.Use(debugLogger.Handler)
+
+		rAPI.Mount("/api").Route(func(r *routegroup.Bundle) {
+			r.With(rest.Throttle(10)).HandleFunc("GET /candle", s.getCandle)
+			r.With(rest.Throttle(100)).HandleFunc("POST /insert", s.insert)
 		})
 	})
 
@@ -169,15 +172,4 @@ func (s *Server) insert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.JSON(w, r, rest.JSON{"result": "ok"})
-}
-
-// fileServer conveniently sets up a http.fileServer handler to serve
-// static files from a http.FileSystem.
-func fileServer(r chi.Router, path string, root http.FileSystem) {
-	fs := http.StripPrefix(path, http.FileServer(root))
-	path += "*"
-
-	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
-		fs.ServeHTTP(w, r)
-	})
 }
