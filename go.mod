@@ -5,7 +5,6 @@ go 1.23.0
 toolchain go1.24.1
 
 require (
-	github.com/go-chi/render v1.0.3
 	github.com/go-pkgz/lgr v0.12.0
 	github.com/go-pkgz/rest v1.20.3
 	github.com/go-pkgz/routegroup v1.3.1
@@ -15,7 +14,6 @@ require (
 )
 
 require (
-	github.com/ajg/form v1.5.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
