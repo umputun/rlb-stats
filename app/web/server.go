@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-chi/render"
 	log "github.com/go-pkgz/lgr"
 	"github.com/go-pkgz/rest"
 	"github.com/go-pkgz/rest/logger"
@@ -78,29 +77,28 @@ func (s *Server) routes() http.Handler {
 	return r
 }
 
-func sendErrorJSON(w http.ResponseWriter, r *http.Request, code int, err error, details string) {
+func sendErrorJSON(w http.ResponseWriter, code int, err error, details string) {
 	log.Printf("[DEBUG] %s", details)
-	render.Status(r, code)
-	render.JSON(w, r, JSON{"error": err.Error(), "details": details})
+	writeJSON(w, code, JSON{"error": err.Error(), "details": details})
 }
 
 // GET /api/candle?from=2022-04-06T05:06:17.041Z&to=2022-04-06T06:06:17.041Z&max_points=100&files=10
 func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	if from == "" {
-		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("no 'from' field passed"), "")
+		sendErrorJSON(w, http.StatusBadRequest, errors.New("no 'from' field passed"), "")
 		return
 	}
 	fromTime, err := time.Parse(time.RFC3339, from)
 	if err != nil {
-		sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'from' field")
+		sendErrorJSON(w, http.StatusExpectationFailed, err, "can't parse 'from' field")
 		return
 	}
 	toTime := time.Now()
 	if to := r.URL.Query().Get("to"); to != "" {
 		t, terr := time.Parse(time.RFC3339, to)
 		if terr != nil {
-			sendErrorJSON(w, r, http.StatusExpectationFailed, terr, "can't parse 'to' field")
+			sendErrorJSON(w, http.StatusExpectationFailed, terr, "can't parse 'to' field")
 			return
 		}
 		toTime = t
@@ -109,14 +107,14 @@ func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	if a := r.URL.Query().Get("aggregate"); a != "" {
 		aggDuration, err = time.ParseDuration(a)
 		if err != nil {
-			sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'aggregate' field")
+			sendErrorJSON(w, http.StatusExpectationFailed, err, "can't parse 'aggregate' field")
 			return
 		}
 	}
 	if n := r.URL.Query().Get("max_points"); n != "" {
 		i, err := strconv.ParseInt(n, 10, 8)
 		if err != nil {
-			sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'max_points' field")
+			sendErrorJSON(w, http.StatusExpectationFailed, err, "can't parse 'max_points' field")
 			return
 		}
 		aggDuration = toTime.Sub(fromTime).Truncate(time.Second) / time.Duration(i)
@@ -124,20 +122,19 @@ func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 
 	candles, err := loadCandles(r.Context(), s.Engine, fromTime, toTime, aggDuration)
 	if err != nil {
-		sendErrorJSON(w, r, http.StatusBadRequest, err, "can't load candles")
+		sendErrorJSON(w, http.StatusBadRequest, err, "can't load candles")
 		return
 	}
 	if files := r.URL.Query().Get("files"); files != "" {
 		filesN, err := strconv.Atoi(files)
 		if err != nil {
-			sendErrorJSON(w, r, http.StatusExpectationFailed, err, "can't parse 'files' field")
+			sendErrorJSON(w, http.StatusExpectationFailed, err, "can't parse 'files' field")
 			return
 		}
 		candles = limitCandleFiles(candles, filesN)
 	}
 
-	render.Status(r, http.StatusOK)
-	render.JSON(w, r, candles)
+	writeJSON(w, http.StatusOK, candles)
 }
 
 // POST /api/insert
@@ -146,30 +143,42 @@ func (s *Server) insert(w http.ResponseWriter, r *http.Request) {
 	var l store.LogRecord
 	err := decoder.Decode(&l)
 	if err != nil {
-		sendErrorJSON(w, r, http.StatusBadRequest, err, "Problem decoding JSON")
+		sendErrorJSON(w, http.StatusBadRequest, err, "Problem decoding JSON")
 		return
 	}
 	if l.Date.Equal(time.Time{}) {
-		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("missing field in JSON"), "ts")
+		sendErrorJSON(w, http.StatusBadRequest, errors.New("missing field in JSON"), "ts")
 		return
 	}
 	if l.DestHost == "" {
-		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("missing field in JSON"), "dest")
+		sendErrorJSON(w, http.StatusBadRequest, errors.New("missing field in JSON"), "dest")
 		return
 	}
 	if l.FileName == "" {
-		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("missing field in JSON"), "file_name")
+		sendErrorJSON(w, http.StatusBadRequest, errors.New("missing field in JSON"), "file_name")
 		return
 	}
 	if l.FromIP == "" {
-		sendErrorJSON(w, r, http.StatusBadRequest, errors.New("missing field in JSON"), "from_ip")
+		sendErrorJSON(w, http.StatusBadRequest, errors.New("missing field in JSON"), "from_ip")
 		return
 	}
 	err = saveLogRecord(s.Engine, s.Aggregator, l)
 	if err != nil {
-		sendErrorJSON(w, r, http.StatusInternalServerError, err, "Problem saving LogRecord")
+		sendErrorJSON(w, http.StatusInternalServerError, err, "Problem saving LogRecord")
 		return
 	}
 
-	render.JSON(w, r, rest.JSON{"result": "ok"})
+	writeJSON(w, http.StatusOK, rest.JSON{"result": "ok"})
+}
+
+// writeJSON writes v as JSON to the response with the given status code
+func writeJSON(w http.ResponseWriter, code int, v interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(true)
+	if err := encoder.Encode(v); err != nil {
+		log.Printf("[ERROR] failed to encode response: %v", err)
+	}
 }

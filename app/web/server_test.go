@@ -23,7 +23,7 @@ func TestSendErrorJSON(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/error" {
 			t.Log("http err request", r.URL)
-			sendErrorJSON(w, r, 500, errors.New("error 500"), "error details 123456")
+			sendErrorJSON(w, 500, errors.New("error 500"), "error details 123456")
 			return
 		}
 		w.WriteHeader(404)
