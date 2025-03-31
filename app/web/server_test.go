@@ -3,7 +3,6 @@ package web
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,29 +17,6 @@ import (
 
 	"github.com/umputun/rlb-stats/app/store"
 )
-
-func TestSendErrorJSON(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/error" {
-			t.Log("http err request", r.URL)
-			sendErrorJSON(w, 500, errors.New("error 500"), "error details 123456")
-			return
-		}
-		w.WriteHeader(404)
-	}))
-
-	defer ts.Close()
-
-	resp, err := http.Get(ts.URL + "/error")
-	require.Nil(t, err)
-
-	body, err := ioutil.ReadAll(resp.Body)
-	require.Nil(t, err)
-	assert.Equal(t, 500, resp.StatusCode)
-	assert.NoError(t, resp.Body.Close())
-
-	assert.Equal(t, `{"details":"error details 123456","error":"error 500"}`+"\n", string(body))
-}
 
 func TestServerUI(t *testing.T) {
 	goodServer, goodTeardown := startupT(t, false)
@@ -92,41 +68,41 @@ func TestServerAPI(t *testing.T) {
 		body         io.Reader
 	}{
 		{ts: goodServer, url: "/api/candle", responseCode: http.StatusBadRequest,
-			result: "{\"details\":\"\",\"error\":\"no 'from' field passed\"}\n"},
+			result: "{\"error\":\"no 'from' field passed\"}\n"},
 		{ts: goodServer, url: "/api/candle?from=bad", responseCode: http.StatusExpectationFailed,
-			result: "{\"details\":\"can't parse 'from' field\",\"error\":\"parsing time \\\"bad\\\" as \\\"2006-01-02T15:04:05Z07:00\\\": cannot parse \\\"bad\\\" as \\\"2006\\\"\"}\n"},
+			result: "{\"error\":\"can't parse 'from' field\"}\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&to=bad", startTime), responseCode: http.StatusExpectationFailed,
-			result: "{\"details\":\"can't parse 'to' field\",\"error\":\"parsing time \\\"bad\\\" as \\\"2006-01-02T15:04:05Z07:00\\\": cannot parse \\\"bad\\\" as \\\"2006\\\"\"}\n"},
+			result: "{\"error\":\"can't parse 'to' field\"}\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&aggregate=bad", startTime), responseCode: http.StatusExpectationFailed,
-			result: `{"details":"can't parse 'aggregate' field","error":"time: invalid duration \"bad\""}` + "\n"},
+			result: "{\"error\":\"can't parse 'aggregate' field\"}\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=256", startTime), responseCode: http.StatusExpectationFailed,
-			result: "{\"details\":\"can't parse 'max_points' field\",\"error\":\"strconv.ParseInt: parsing \\\"256\\\": value out of range\"}\n"},
+			result: "{\"error\":\"can't parse 'max_points' field\"}\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v", startTime, startTime), responseCode: http.StatusOK,
 			result: "[]\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v", startTime), responseCode: http.StatusOK,
 			candles: []store.Candle{storedCandle}},
 		{ts: badServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v&aggregate=5m&max_points=10", startTime, url.QueryEscape(endTime)), responseCode: http.StatusBadRequest,
-			result: "{\"details\":\"can't load candles\",\"error\":\"test error\"}\n"},
+			result: "{\"error\":\"can't load candles\"}\n"},
 		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
-			result: "{\"details\":\"Problem decoding JSON\",\"error\":\"EOF\"}\n"},
+			result: "{\"error\":\"Problem decoding JSON\"}\n"},
 		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
 			body:   bytes.NewReader([]byte(`{}`)),
-			result: "{\"details\":\"ts\",\"error\":\"missing field in JSON\"}\n"},
+			result: "{\"error\":\"missing field in JSON: ts\"}\n"},
 		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
 			body:   bytes.NewReader([]byte(`{"ts":"1970-01-01T01:01:00+01:00"}`)),
-			result: "{\"details\":\"dest\",\"error\":\"missing field in JSON\"}\n"},
+			result: "{\"error\":\"missing field in JSON: dest\"}\n"},
 		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
 			body:   bytes.NewReader([]byte(`{"ts":"1970-01-01T01:01:00+01:00","dest":"test"}}`)),
-			result: "{\"details\":\"file_name\",\"error\":\"missing field in JSON\"}\n"},
+			result: "{\"error\":\"missing field in JSON: file_name\"}\n"},
 		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
 			body:   bytes.NewReader([]byte(`{"ts":"1970-01-01T01:01:00+01:00","file_name":"rt_test.mp3","dest":"test"}`)),
-			result: "{\"details\":\"from_ip\",\"error\":\"missing field in JSON\"}\n"},
+			result: "{\"error\":\"missing field in JSON: from_ip\"}\n"},
 		{ts: badServer, url: "/api/insert", responseCode: http.StatusOK, method: http.MethodPost,
 			body:   bytes.NewReader([]byte(`{"from_ip":"127.0.0.1","file_name":"rt_test.mp3","dest":"new_node","ts":"1970-01-01T01:01:00+01:00"}`)),
 			result: "{\"result\":\"ok\"}\n"},
 		{ts: badServer, url: "/api/insert", responseCode: http.StatusInternalServerError, method: http.MethodPost,
 			body:   bytes.NewReader([]byte(`{"from_ip":"127.0.0.1","file_name":"rt_test.mp3","dest":"new_node","ts":"1970-01-01T01:00:00+01:00"}`)),
-			result: "{\"details\":\"Problem saving LogRecord\",\"error\":\"test error\"}\n"},
+			result: "{\"error\":\"Problem saving LogRecord\"}\n"},
 	}
 	client := http.Client{}
 	for i, x := range testData {
