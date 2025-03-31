@@ -37,7 +37,7 @@ func aggregateCandles(ctx context.Context, candles []store.Candle, aggInterval t
 		minuteCandle := store.NewCandle()
 		minuteCandle.StartMinute = aggTime
 		for _, c := range candles {
-			if c.StartMinute == aggTime || c.StartMinute.After(aggTime) && c.StartMinute.Before(aggTime.Add(aggInterval)) {
+			if c.StartMinute.Equal(aggTime) || c.StartMinute.After(aggTime) && c.StartMinute.Before(aggTime.Add(aggInterval)) {
 				c = updateCandleAndDiscardTime(minuteCandle, c)
 			}
 		}
