@@ -13,7 +13,7 @@ jobs:
     steps:
 
     - name: checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: debug if needed
       run: if [[ "$DEBUG" == "true" ]]; then env; fi
@@ -34,7 +34,7 @@ jobs:
         TZ: America/Chicago
 
     - name: golangci-lint
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@v8
       with:
         version: latest
 
