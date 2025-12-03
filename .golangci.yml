@@ -1,36 +1,50 @@
+version: "2"
 run:
   tests: false
-  timeout: 5m
 linters:
+  default: none
   enable:
-  - bodyclose
-  - dogsled
-  - dupl
-  - errcheck
-  - copyloopvar
-  - gochecknoinits
-  - goconst
-  - gocritic
-  - gocyclo
-  - gofmt
-  - goimports
-  - goprintffuncname
-  - gosec
-  - gosec
-  - gosimple
-  - govet
-  - ineffassign
-  - misspell
-  - nakedret
-  - revive
-  - rowserrcheck
-  - staticcheck
-  - stylecheck
-  - typecheck
-  - unconvert
-  - unparam
-  - unused
-  disable-all: true
-issues:
-  exclude-dirs:
-    - vendor
+    - bodyclose
+    - copyloopvar
+    - dogsled
+    - dupl
+    - errcheck
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - revive
+    - rowserrcheck
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$
