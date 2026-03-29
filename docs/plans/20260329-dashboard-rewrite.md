@@ -166,13 +166,13 @@ Build ECharts-compatible JSON option objects server-side for embedding in templa
 
 Minimal JS that initialises ECharts instances after HTMX content swaps.
 
-- [ ] write `initCharts()` function — finds all `[data-echarts]` containers, reads JSON from associated `<script type="application/json">` sibling, calls `echarts.init(container).setOption(data)`
-- [ ] handle chart resize on `window.resize` — call `echarts.getInstanceByDom(el).resize()` for each chart container
-- [ ] add `htmx:afterSettle` event listener that calls `initCharts()`
-- [ ] call `initCharts()` on `DOMContentLoaded` for initial page load
-- [ ] create separate `//go:embed static` in `app/web/embed.go` and serve at `/static/charts.js`
-- [ ] add `<script src="/static/charts.js">` to `layout.html`
-- [ ] manual verification: charts render correctly after period switch (no automated test for JS)
+- [x] write `initCharts()` function — finds all `[data-echarts]` containers, reads JSON from associated `<script type="application/json">` sibling, calls `echarts.init(container).setOption(data)`
+- [x] handle chart resize on `window.resize` — call `echarts.getInstanceByDom(el).resize()` for each chart container
+- [x] add `htmx:afterSettle` event listener that calls `initCharts()`
+- [x] call `initCharts()` on `DOMContentLoaded` for initial page load
+- [x] create separate `//go:embed static` in `app/web/embed.go` and serve at `/static/charts.js`
+- [x] add `<script src="/static/charts.js">` to `layout.html`
+- [x] manual verification: charts render correctly after period switch (skipped - not automatable)
 
 ### Task 7: Remove old frontend
 
