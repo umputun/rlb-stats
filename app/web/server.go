@@ -29,7 +29,7 @@ type Server struct {
 }
 
 // JSON is a map alias, just for convenience
-type JSON map[string]interface{}
+type JSON map[string]any
 
 // Run starts a web-server
 func (s *Server) Run() {

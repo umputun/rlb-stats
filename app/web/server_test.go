@@ -35,8 +35,6 @@ func TestServerUI(t *testing.T) {
 	}
 	client := http.Client{}
 	for i, x := range testData {
-		i := i
-		x := x
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, x.ts.URL+x.url, nil)
 			require.NoError(t, err, i)
@@ -106,8 +104,6 @@ func TestServerAPI(t *testing.T) {
 	}
 	client := http.Client{}
 	for i, x := range testData {
-		i := i
-		x := x
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			if x.method == "" {
 				x.method = http.MethodGet

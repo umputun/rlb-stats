@@ -62,8 +62,8 @@ func (s *Bolt) Load(ctx context.Context, periodStart, periodEnd time.Time) (resu
 		b := tx.Bucket(bucket)
 		c := b.Cursor()
 
-		minimum := []byte(fmt.Sprintf("%d", periodStart.Unix()))
-		maximum := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
+		minimum := fmt.Appendf(nil, "%d", periodStart.Unix())
+		maximum := fmt.Appendf(nil, "%d", periodEnd.Unix())
 
 		for k, v := c.Seek(minimum); k != nil && bytes.Compare(k, maximum) <= 0; k, v = c.Next() {
 			select {
@@ -94,8 +94,8 @@ func (s *Bolt) LoadStream(ctx context.Context, periodStart, periodEnd time.Time)
 			b := tx.Bucket(bucket)
 			c := b.Cursor()
 
-			minimum := []byte(fmt.Sprintf("%d", periodStart.Unix()))
-			maximum := []byte(fmt.Sprintf("%d", periodEnd.Unix()))
+			minimum := fmt.Appendf(nil, "%d", periodStart.Unix())
+			maximum := fmt.Appendf(nil, "%d", periodEnd.Unix())
 
 			for k, v := c.Seek(minimum); k != nil && bytes.Compare(k, maximum) <= 0; k, v = c.Next() {
 				select {
