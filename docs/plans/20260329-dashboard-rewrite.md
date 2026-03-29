@@ -196,13 +196,13 @@ Minimal JS that initialises ECharts instances after HTMX content swaps.
 
 ### Task 8: Verify acceptance criteria
 
-- [ ] verify all requirements from issues #23 and #11 (items 1-3) are implemented
-- [ ] verify existing `/api/candle` endpoint still works unchanged
-- [ ] verify existing `/api/insert` endpoint still works unchanged
-- [ ] verify `max_points=200` works correctly
-- [ ] run full test suite: `go test -race ./...`
-- [ ] run linter: `golangci-lint run`
-- [ ] format code: `gofmt -w` on all modified Go files
+- [x] verify all requirements from issues #23 and #11 (items 1-3) are implemented
+- [x] verify existing `/api/candle` endpoint still works unchanged
+- [x] verify existing `/api/insert` endpoint still works unchanged
+- [x] verify `max_points=200` works correctly
+- [x] run full test suite: `go test -race ./...`
+- [x] run linter: `golangci-lint run`
+- [x] format code: `gofmt -w` on all modified Go files
 
 ### Task 9: Update documentation
 
