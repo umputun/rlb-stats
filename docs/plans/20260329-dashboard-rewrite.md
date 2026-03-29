@@ -78,10 +78,10 @@ Complete rewrite of the rlb-stats dashboard from a client-side SPA (4 chart libr
 - Modify: `app/web/server.go`
 - Modify: `app/web/server_test.go`
 
-- [ ] change `strconv.ParseInt(n, 10, 8)` to `strconv.ParseInt(n, 10, 64)` at `app/web/server.go:130`
-- [ ] update existing test case at `server_test.go:76` that expects `max_points=256` to return 400 — it should now succeed
-- [ ] write test for `max_points=200` returning valid response
-- [ ] run tests — must pass before next task
+- [x] change `strconv.ParseInt(n, 10, 8)` to `strconv.ParseInt(n, 10, 64)` at `app/web/server.go:130`
+- [x] update existing test case at `server_test.go:76` that expects `max_points=256` to return 400 — it should now succeed
+- [x] write test for `max_points=200` returning valid response
+- [x] run tests — must pass before next task
 
 ### Task 3a: Dashboard data computation functions
 
