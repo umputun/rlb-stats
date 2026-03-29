@@ -97,18 +97,24 @@ func TestServerDashboardBadEngine(t *testing.T) {
 
 	client := http.Client{}
 
-	t.Run("GET / with bad engine returns 400", func(t *testing.T) {
+	t.Run("GET / with bad engine returns 500", func(t *testing.T) {
 		resp, err := client.Get(badServer.URL + "/")
 		require.NoError(t, err)
-		_ = resp.Body.Close()
-		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, resp.Body.Close())
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Contains(t, string(body), "failed to load dashboard data")
 	})
 
-	t.Run("GET /fragment/dashboard with bad engine returns 400", func(t *testing.T) {
+	t.Run("GET /fragment/dashboard with bad engine returns 500", func(t *testing.T) {
 		resp, err := client.Get(badServer.URL + "/fragment/dashboard?period=all")
 		require.NoError(t, err)
-		_ = resp.Body.Close()
-		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, resp.Body.Close())
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Contains(t, string(body), "failed to load dashboard data")
 	})
 }
 
