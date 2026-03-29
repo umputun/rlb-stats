@@ -91,16 +91,16 @@ Complete rewrite of the rlb-stats dashboard from a client-side SPA (4 chart libr
 
 Server-side functions that transform candles into view-ready data structures.
 
-- [ ] define view data structs: `DashboardData`, `SummaryData` (period label + total count), `FileStats` (name, count, percent of max), `NodeStats` (name, volume, percent of max), `HeatmapCell` (hour, weekday, value)
-- [ ] implement `computeSummary(candles []store.Candle) int` — sums `"all"` node Volume across candles; the handler calls this 5 times with different candle slices (1h, 24h, 1w, 1m, all) and assembles `[]SummaryData` with period labels
-- [ ] implement `computeTopFiles(candles []store.Candle, limit int) []FileStats` — aggregates `"all"` node Files maps, sorts desc, returns top N with percent-of-max for CSS bar widths
-- [ ] implement `computeNodeStats(candles []store.Candle) []NodeStats` — sums per-node Volume (excluding `"all"`), sorts desc, computes percent-of-max
-- [ ] implement `computeHeatmap(candles []store.Candle) []HeatmapCell` — buckets by `(hour, weekday)` using candle StartMinute, sums Volume from `"all"` node into 24x7 grid
-- [ ] write table-driven tests for `computeSummary` with various candle inputs
-- [ ] write tests for `computeTopFiles` — verifies ranking, limit, percent calculation
-- [ ] write tests for `computeNodeStats` — verifies "all" node excluded, ranking
-- [ ] write tests for `computeHeatmap` — verifies correct hour/weekday bucketing
-- [ ] run tests — must pass before next task
+- [x] define view data structs: `DashboardData`, `SummaryData` (period label + total count), `FileStats` (name, count, percent of max), `NodeStats` (name, volume, percent of max), `HeatmapCell` (hour, weekday, value)
+- [x] implement `computeSummary(candles []store.Candle) int` — sums `"all"` node Volume across candles; the handler calls this 5 times with different candle slices (1h, 24h, 1w, 1m, all) and assembles `[]SummaryData` with period labels
+- [x] implement `computeTopFiles(candles []store.Candle, limit int) []FileStats` — aggregates `"all"` node Files maps, sorts desc, returns top N with percent-of-max for CSS bar widths
+- [x] implement `computeNodeStats(candles []store.Candle) []NodeStats` — sums per-node Volume (excluding `"all"`), sorts desc, computes percent-of-max
+- [x] implement `computeHeatmap(candles []store.Candle) []HeatmapCell` — buckets by `(hour, weekday)` using candle StartMinute, sums Volume from `"all"` node into 24x7 grid
+- [x] write table-driven tests for `computeSummary` with various candle inputs
+- [x] write tests for `computeTopFiles` — verifies ranking, limit, percent calculation
+- [x] write tests for `computeNodeStats` — verifies "all" node excluded, ranking
+- [x] write tests for `computeHeatmap` — verifies correct hour/weekday bucketing
+- [x] run tests — must pass before next task
 
 ### Task 3b: ECharts JSON builder functions
 
@@ -110,11 +110,11 @@ Server-side functions that transform candles into view-ready data structures.
 
 Build ECharts-compatible JSON option objects server-side for embedding in templates.
 
-- [ ] implement `buildChartData(candles []store.Candle, aggDuration time.Duration) []byte` — reuses `aggregateCandles`, marshals into ECharts bar chart option JSON (time axis + download counts)
-- [ ] implement `buildHeatmapData(cells []HeatmapCell) []byte` — marshals into ECharts heatmap option JSON (24x7 grid with visualMap)
-- [ ] write tests for `buildChartData` — verifies valid JSON output with expected structure
-- [ ] write tests for `buildHeatmapData` — verifies valid JSON with correct axes and data points
-- [ ] run tests — must pass before next task
+- [x] implement `buildChartData(candles []store.Candle, aggDuration time.Duration) []byte` — reuses `aggregateCandles`, marshals into ECharts bar chart option JSON (time axis + download counts)
+- [x] implement `buildHeatmapData(cells []HeatmapCell) []byte` — marshals into ECharts heatmap option JSON (24x7 grid with visualMap)
+- [x] write tests for `buildChartData` — verifies valid JSON output with expected structure
+- [x] write tests for `buildHeatmapData` — verifies valid JSON with correct axes and data points
+- [x] run tests — must pass before next task
 
 ### Task 4: HTML templates
 
