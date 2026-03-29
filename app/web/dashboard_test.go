@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"html/template"
 	"os"
@@ -427,7 +428,7 @@ func TestBuildChartData(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := buildChartData(tc.candles, tc.aggDuration)
+			result := buildChartData(context.Background(), tc.candles, tc.aggDuration)
 			tc.checks(t, string(result))
 		})
 	}

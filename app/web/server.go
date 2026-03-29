@@ -247,7 +247,7 @@ func (s *Server) buildDashboardData(r *http.Request) (*DashboardData, error) {
 
 	data := &DashboardData{
 		Summaries:   summaries,
-		ChartJSON:   buildChartData(chartCandles, aggDuration),
+		ChartJSON:   buildChartData(ctx, chartCandles, aggDuration),
 		Files:       computeTopFiles(chartCandles, 20),
 		Nodes:       computeNodeStats(chartCandles),
 		HeatmapJSON: buildHeatmapData(computeHeatmap(chartCandles)),

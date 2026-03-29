@@ -18,7 +18,8 @@ function initCharts() {
             existing.dispose();
         }
 
-        echarts.init(container).setOption(data);
+        var theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : null;
+        echarts.init(container, theme).setOption(data);
     });
 }
 
