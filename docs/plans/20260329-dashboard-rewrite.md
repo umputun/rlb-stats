@@ -64,13 +64,13 @@ Complete rewrite of the rlb-stats dashboard from a client-side SPA (4 chart libr
 - Modify: `app/store/bolt.go`
 - Modify: `app/store/bolt_test.go`
 
-- [ ] add `TimeRange(ctx context.Context) (oldest, newest time.Time, err error)` to `Engine` interface in `app/store/store.go`
-- [ ] implement `TimeRange` on `*Bolt` in `app/store/bolt.go` using BoltDB cursor `First()` and `Last()` on the `"stats"` bucket
-- [ ] handle empty bucket case — return `time.Time{}` zero values with no error
-- [ ] write tests for `TimeRange`: non-empty DB returns correct oldest/newest timestamps
-- [ ] write tests for `TimeRange`: empty DB returns zero times
-- [ ] add `TimeRange` method to `MockDB` and `goodDB` in `app/web/helpers_test.go` (required — interface change causes compile failure otherwise)
-- [ ] run tests — must pass before next task
+- [x] add `TimeRange(ctx context.Context) (oldest, newest time.Time, err error)` to `Engine` interface in `app/store/store.go`
+- [x] implement `TimeRange` on `*Bolt` in `app/store/bolt.go` using BoltDB cursor `First()` and `Last()` on the `"stats"` bucket
+- [x] handle empty bucket case — return `time.Time{}` zero values with no error
+- [x] write tests for `TimeRange`: non-empty DB returns correct oldest/newest timestamps
+- [x] write tests for `TimeRange`: empty DB returns zero times
+- [x] add `TimeRange` method to `MockDB` and `goodDB` in `app/web/helpers_test.go` (required — interface change causes compile failure otherwise)
+- [x] run tests — must pass before next task
 
 ### Task 2: Fix max_points int8 parsing bug
 
