@@ -24,7 +24,15 @@ Open [http://127.0.0.1:8080/api/candle](http://127.0.0.1:8080/api/candle?from=20
 endpoint from to see all aggregated logs since the start of the container.
 
 ### Dashboard
-Open http://127.0.0.1:8080/ to see dashboard with statistics
+Open http://127.0.0.1:8080/ to see the dashboard. The dashboard is server-side rendered using HTMX, Picocss and ECharts. It provides:
+
+- Summary cards showing total downloads for 1 hour, 24 hours, 1 week, 1 month and all time
+- Downloads histogram (ECharts bar chart) with selectable time periods (1h, 12h, 24h, 10d, 30d, all)
+- Top downloaded files with visual bars
+- Per-node download statistics
+- Peak hours heatmap (24h x 7 days)
+
+Period switching is handled via HTMX without full page reloads. Dark mode is supported automatically via Picocss.
 
 ### Application parameters
 
@@ -44,7 +52,7 @@ Open http://127.0.0.1:8080/ to see dashboard with statistics
 Retrieve candles from storage.
 - `from` (required) is the beginning of the interval, format is RFC3339, for example `2006-01-02T15:04:05+07:00`
 - `to` (optional) is the end of the interval
-- `max_points` (optional, default `100`) unsigned integer up to `255`, sets aggregate interval to return not more than specified amount of candles
+- `max_points` (optional, default `100`) unsigned integer, sets aggregate interval to return not more than specified amount of candles
 - `aggregate` (optional, overwrites `max_points`) is the aggregation interval (truncated to minute), format examples are `5m`, `600s`, `1h`
 
 `POST /api/insert`

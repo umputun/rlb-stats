@@ -206,8 +206,8 @@ Minimal JS that initialises ECharts instances after HTMX content swaps.
 
 ### Task 9: Update documentation
 
-- [ ] update README.md — document new dashboard, remove references to chart library selector, update `max_points` documentation (no longer capped at 255)
-- [ ] move this plan to `docs/plans/completed/`
+- [x] update README.md — document new dashboard, remove references to chart library selector, update `max_points` documentation (no longer capped at 255)
+- [x] move this plan to `docs/plans/completed/`
 
 ## Technical Details
 
