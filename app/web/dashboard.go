@@ -213,8 +213,8 @@ type echartsHeatmap struct {
 
 // buildChartData aggregates candles by aggDuration and marshals into ECharts bar chart option JSON.
 // returns empty JSON object on error or empty input.
-func buildChartData(candles []store.Candle, aggDuration time.Duration) template.JS {
-	aggregated := aggregateCandles(context.Background(), candles, aggDuration)
+func buildChartData(ctx context.Context, candles []store.Candle, aggDuration time.Duration) template.JS {
+	aggregated := aggregateCandles(ctx, candles, aggDuration)
 
 	data := make([][]any, 0, len(aggregated))
 	for _, c := range aggregated {
