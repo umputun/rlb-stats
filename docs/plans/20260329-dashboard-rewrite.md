@@ -127,15 +127,15 @@ Build ECharts-compatible JSON option objects server-side for embedding in templa
 - Create: `app/web/templates/partials/nodes.html`
 - Create: `app/web/templates/partials/heatmap.html`
 
-- [ ] create `layout.html` — HTML5 shell with `<head>` loading picocss (CDN), echarts (CDN), htmx (CDN); `<body>` with period buttons (`hx-get="/fragment/dashboard?period=..."` `hx-target="#dashboard"`), `{{template "dashboard" .}}` block
-- [ ] create `dashboard.html` — defines `"dashboard"` template, includes all partials in order: summary, chart, files, nodes, heatmap
-- [ ] create `partials/summary.html` — row of picocss `<article>` cards, each showing period label and total download count
-- [ ] create `partials/chart.html` — `<div id="downloads-chart">` container + `<script type="application/json" id="chart-data">` with `{{.ChartJSON}}`
-- [ ] create `partials/files.html` — `<table>` with rank, filename, count, CSS bar (`<div style="width:{{.Percent}}%">`)
-- [ ] create `partials/nodes.html` — `<table>` with node name, volume, CSS bar
-- [ ] create `partials/heatmap.html` — `<div id="heatmap-chart">` container + `<script type="application/json" id="heatmap-data">` with `{{.HeatmapJSON}}`
-- [ ] write a simple template parse test — `template.Must(template.ParseFS(...))` to verify all templates are syntactically valid
-- [ ] run tests — must pass before next task
+- [x] create `layout.html` — HTML5 shell with `<head>` loading picocss (CDN), echarts (CDN), htmx (CDN); `<body>` with period buttons (`hx-get="/fragment/dashboard?period=..."` `hx-target="#dashboard"`), `{{template "dashboard" .}}` block
+- [x] create `dashboard.html` — defines `"dashboard"` template, includes all partials in order: summary, chart, files, nodes, heatmap
+- [x] create `partials/summary.html` — row of picocss `<article>` cards, each showing period label and total download count
+- [x] create `partials/chart.html` — `<div id="downloads-chart">` container + `<script type="application/json" id="chart-data">` with `{{.ChartJSON}}`
+- [x] create `partials/files.html` — `<table>` with rank, filename, count, CSS bar (`<div style="width:{{.Percent}}%">`)
+- [x] create `partials/nodes.html` — `<table>` with node name, volume, CSS bar
+- [x] create `partials/heatmap.html` — `<div id="heatmap-chart">` container + `<script type="application/json" id="heatmap-data">` with `{{.HeatmapJSON}}`
+- [x] write a simple template parse test — `template.Must(template.ParseFS(...))` to verify all templates are syntactically valid
+- [x] run tests — must pass before next task
 
 ### Task 5: Dashboard handler and routes
 

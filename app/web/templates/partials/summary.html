@@ -1,0 +1,13 @@
+{{define "summary"}}
+<section>
+    <h2>Downloads</h2>
+    <div class="summary-grid">
+        {{range .Summaries}}
+        <article>
+            <h2>{{.Count}}</h2>
+            <p>{{.Label}}</p>
+        </article>
+        {{end}}
+    </div>
+</section>
+{{end}}
