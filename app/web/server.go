@@ -64,6 +64,11 @@ func (s *Server) Run(ctx context.Context) {
 	}
 }
 
+// badRequestError indicates a client input error (invalid query parameters, etc.)
+type badRequestError struct{ msg string }
+
+func (e *badRequestError) Error() string { return e.msg }
+
 // validPeriods maps period parameter values to their durations
 var validPeriods = map[string]time.Duration{
 	"1h":  time.Hour,
@@ -130,7 +135,13 @@ func (s *Server) routes() http.Handler {
 func (s *Server) dashboardPage(w http.ResponseWriter, r *http.Request) {
 	data, err := s.buildDashboardData(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		var bre *badRequestError
+		if errors.As(err, &bre) {
+			http.Error(w, bre.msg, http.StatusBadRequest)
+		} else {
+			log.Printf("[WARN] dashboard page error, %s", err)
+			http.Error(w, "failed to load dashboard data", http.StatusInternalServerError)
+		}
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -143,7 +154,13 @@ func (s *Server) dashboardPage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) dashboardFragment(w http.ResponseWriter, r *http.Request) {
 	data, err := s.buildDashboardData(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		var bre *badRequestError
+		if errors.As(err, &bre) {
+			http.Error(w, bre.msg, http.StatusBadRequest)
+		} else {
+			log.Printf("[WARN] dashboard fragment error, %s", err)
+			http.Error(w, "failed to load dashboard data", http.StatusInternalServerError)
+		}
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -160,7 +177,7 @@ func (s *Server) buildDashboardData(r *http.Request) (*DashboardData, error) {
 	}
 	dur, ok := validPeriods[period]
 	if !ok {
-		return nil, fmt.Errorf("invalid period %q", period)
+		return nil, &badRequestError{msg: fmt.Sprintf("invalid period %q", period)}
 	}
 
 	ctx := r.Context()
