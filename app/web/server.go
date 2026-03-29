@@ -127,7 +127,7 @@ func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if n := r.URL.Query().Get("max_points"); n != "" {
-		i, err := strconv.ParseInt(n, 10, 8)
+		i, err := strconv.ParseInt(n, 10, 64)
 		if err != nil {
 			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, err, "can't parse 'max_points' field")
 			return
