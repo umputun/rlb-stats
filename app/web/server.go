@@ -104,12 +104,11 @@ func (s *Server) routes() http.Handler {
 
 		rUI.HandleFunc("GET /", s.dashboardPage)
 		rUI.HandleFunc("GET /fragment/dashboard", s.dashboardFragment)
-		rUI.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, "webapp/favicon.ico")
-		})
-
-		// serve embedded static assets (charts.js)
+		// serve embedded static assets (charts.js, favicon.ico)
 		staticSub, _ := fs.Sub(staticFS, "static")
+		rUI.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFileFS(w, r, staticSub, "favicon.ico")
+		})
 		rUI.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(staticSub)))
 	})
 

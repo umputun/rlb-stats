@@ -186,13 +186,13 @@ Minimal JS that initialises ECharts instances after HTMX content swaps.
 - Delete: `webapp/taucharts.js`
 - Keep: `webapp/favicon.ico`
 
-- [ ] delete all JS files from `webapp/`: index.js, data.js, anycharts.js, apexcharts.js, echarts.js, taucharts.js
-- [ ] delete `webapp/index.html`
-- [ ] keep `webapp/favicon.ico` — serve via embedded FS or keep as static file
-- [ ] update `routes()` — remove or adjust old `HandleFiles` for `webapp/` directory (only favicon needed now)
-- [ ] verify no remaining references to deleted files in Go code
-- [ ] update `Dockerfile` — remove or adjust `COPY webapp /srv/webapp` line (templates are embedded in binary, only favicon may need copying)
-- [ ] run tests — must pass before next task
+- [x] delete all JS files from `webapp/`: index.js, data.js, anycharts.js, apexcharts.js, echarts.js, taucharts.js
+- [x] delete `webapp/index.html`
+- [x] keep `webapp/favicon.ico` — serve via embedded FS or keep as static file
+- [x] update `routes()` — remove or adjust old `HandleFiles` for `webapp/` directory (only favicon needed now)
+- [x] verify no remaining references to deleted files in Go code
+- [x] update `Dockerfile` — remove or adjust `COPY webapp /srv/webapp` line (templates are embedded in binary, only favicon may need copying)
+- [x] run tests — must pass before next task
 
 ### Task 8: Verify acceptance criteria
 
