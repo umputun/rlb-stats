@@ -148,8 +148,8 @@ func computeHeatmap(candles []store.Candle) []HeatmapCell {
 	}
 
 	cells := make([]HeatmapCell, 0, 24*7)
-	for h := 0; h < 24; h++ {
-		for d := 0; d < 7; d++ {
+	for h := range 24 {
+		for d := range 7 {
 			cells = append(cells, HeatmapCell{Hour: h, Weekday: d, Value: grid[h][d]})
 		}
 	}
@@ -243,7 +243,7 @@ func buildChartData(candles []store.Candle, aggDuration time.Duration) template.
 // buildHeatmapData marshals HeatmapCell slice into ECharts heatmap option JSON
 func buildHeatmapData(cells []HeatmapCell) template.JS {
 	hours := make([]string, 24)
-	for h := 0; h < 24; h++ {
+	for h := range 24 {
 		hours[h] = fmt.Sprintf("%02d:00", h)
 	}
 	weekdays := []string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"}

@@ -512,8 +512,8 @@ func TestBuildHeatmapData(t *testing.T) {
 			name: "full 24x7 grid produces 168 data points",
 			cells: func() []HeatmapCell {
 				cells := make([]HeatmapCell, 0, 24*7)
-				for h := 0; h < 24; h++ {
-					for d := 0; d < 7; d++ {
+				for h := range 24 {
+					for d := range 7 {
 						cells = append(cells, HeatmapCell{Hour: h, Weekday: d, Value: h + d})
 					}
 				}

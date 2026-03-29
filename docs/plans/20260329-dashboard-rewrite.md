@@ -144,20 +144,20 @@ Build ECharts-compatible JSON option objects server-side for embedding in templa
 - Create: `app/web/embed.go`
 - Modify: `app/web/server_test.go`
 
-- [ ] create `app/web/embed.go` with `//go:embed templates` directive exposing `embed.FS`
-- [ ] add template parsing in `Server` — parse all templates from embedded FS on startup (in `routes()` or a new init method)
-- [ ] implement `GET /` handler — loads candles for default period (24h), computes all dashboard data (5 summary loads + selected period), renders `layout.html` with `DashboardData`
-- [ ] implement `GET /fragment/dashboard` handler — same computation, renders only `dashboard.html` template (no layout wrapper) for HTMX swap
-- [ ] parse `period` query param: `1h`, `12h`, `24h`, `10d`, `30d`, `all` (using `TimeRange` for `all`)
-- [ ] register new routes in `routes()`: `GET /` for full page, `GET /fragment/dashboard` for HTMX fragment
-- [ ] update static file serving — serve `webapp/` only for `favicon.ico` (or move favicon to embedded FS)
-- [ ] update existing `TestServerUI` tests in `server_test.go` — remove assertions for deleted JS files, update `GET /` to expect new SSR HTML
-- [ ] remove `webappPrefix` field from `Server` struct and update `startupT` helper accordingly
-- [ ] write integration test: `GET /` returns full HTML page with expected sections
-- [ ] write integration test: `GET /fragment/dashboard?period=1h` returns HTML fragment without `<html>` wrapper
-- [ ] write integration test: `GET /fragment/dashboard?period=all` works with TimeRange
-- [ ] write integration test: invalid period returns 400
-- [ ] run tests — must pass before next task
+- [x] create `app/web/embed.go` with `//go:embed templates` directive exposing `embed.FS`
+- [x] add template parsing in `Server` — parse all templates from embedded FS on startup (in `routes()` or a new init method)
+- [x] implement `GET /` handler — loads candles for default period (24h), computes all dashboard data (5 summary loads + selected period), renders `layout.html` with `DashboardData`
+- [x] implement `GET /fragment/dashboard` handler — same computation, renders only `dashboard.html` template (no layout wrapper) for HTMX swap
+- [x] parse `period` query param: `1h`, `12h`, `24h`, `10d`, `30d`, `all` (using `TimeRange` for `all`)
+- [x] register new routes in `routes()`: `GET /` for full page, `GET /fragment/dashboard` for HTMX fragment
+- [x] update static file serving — serve `webapp/` only for `favicon.ico` (or move favicon to embedded FS)
+- [x] update existing `TestServerUI` tests in `server_test.go` — remove assertions for deleted JS files, update `GET /` to expect new SSR HTML
+- [x] remove `webappPrefix` field from `Server` struct and update `startupT` helper accordingly
+- [x] write integration test: `GET /` returns full HTML page with expected sections
+- [x] write integration test: `GET /fragment/dashboard?period=1h` returns HTML fragment without `<html>` wrapper
+- [x] write integration test: `GET /fragment/dashboard?period=all` works with TimeRange
+- [x] write integration test: invalid period returns 400
+- [x] run tests — must pass before next task
 
 ### Task 6: ECharts initialisation script
 

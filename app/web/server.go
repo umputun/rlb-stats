@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -26,12 +25,12 @@ type LogAggregator interface {
 
 // Server is a web-server for rlb-stats REST API and UI
 type Server struct {
-	Engine       store.Engine
-	Aggregator   LogAggregator
-	Port         int
-	Version      string
-	address      string // set only in tests
-	webappPrefix string // set only in tests
+	Engine     store.Engine
+	Aggregator LogAggregator
+	Port       int
+	Version    string
+	address    string // set only in tests
+	templates  *template.Template
 }
 
 // JSON is a map alias, just for convenience
@@ -64,7 +63,31 @@ func (s *Server) Run(ctx context.Context) {
 	}
 }
 
+// validPeriods maps period parameter values to their durations
+var validPeriods = map[string]time.Duration{
+	"1h":  time.Hour,
+	"12h": 12 * time.Hour,
+	"24h": 24 * time.Hour,
+	"10d": 10 * 24 * time.Hour,
+	"30d": 30 * 24 * time.Hour,
+	"all": 0, // special case, uses TimeRange
+}
+
+func (s *Server) parseTemplates() {
+	funcMap := template.FuncMap{
+		"list": func(args ...string) []string { return args },
+		"inc":  func(i int) int { return i + 1 },
+	}
+	s.templates = template.Must(template.New("").Funcs(funcMap).ParseFS(templateFS,
+		"templates/layout.html",
+		"templates/dashboard.html",
+		"templates/partials/*.html",
+	))
+}
+
 func (s *Server) routes() http.Handler {
+	s.parseTemplates()
+
 	r := routegroup.New(http.NewServeMux())
 
 	// Common middleware
@@ -78,9 +101,11 @@ func (s *Server) routes() http.Handler {
 		rUI.Use(infoLogger.Handler)
 		rUI.Use(rest.Throttle(10))
 
-		workDir, _ := os.Getwd()
-		filesDir := filepath.Join(workDir, s.webappPrefix+"webapp")
-		rUI.HandleFiles("/", http.Dir(filesDir))
+		rUI.HandleFunc("GET /", s.dashboardPage)
+		rUI.HandleFunc("GET /fragment/dashboard", s.dashboardFragment)
+		rUI.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "webapp/favicon.ico")
+		})
 	})
 
 	// API routes group
@@ -95,6 +120,119 @@ func (s *Server) routes() http.Handler {
 	})
 
 	return r
+}
+
+// dashboardPage renders the full dashboard HTML page (GET /)
+func (s *Server) dashboardPage(w http.ResponseWriter, r *http.Request) {
+	data, err := s.buildDashboardData(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := s.templates.ExecuteTemplate(w, "layout.html", data); err != nil {
+		log.Printf("[WARN] failed to render dashboard page, %s", err)
+	}
+}
+
+// dashboardFragment renders only the dashboard content for HTMX swap (GET /fragment/dashboard)
+func (s *Server) dashboardFragment(w http.ResponseWriter, r *http.Request) {
+	data, err := s.buildDashboardData(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := s.templates.ExecuteTemplate(w, "dashboard", data); err != nil {
+		log.Printf("[WARN] failed to render dashboard fragment, %s", err)
+	}
+}
+
+// buildDashboardData assembles DashboardData from candles for the requested period
+func (s *Server) buildDashboardData(r *http.Request) (*DashboardData, error) {
+	period := r.URL.Query().Get("period")
+	if period == "" {
+		period = "24h"
+	}
+	dur, ok := validPeriods[period]
+	if !ok {
+		return nil, fmt.Errorf("invalid period %q", period)
+	}
+
+	ctx := r.Context()
+	now := time.Now()
+
+	// determine chart time range
+	var chartFrom time.Time
+	if period == "all" {
+		oldest, _, err := s.Engine.TimeRange(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("can't get time range: %w", err)
+		}
+		if oldest.IsZero() {
+			chartFrom = now
+		} else {
+			chartFrom = oldest
+		}
+	} else {
+		chartFrom = now.Add(-dur)
+	}
+
+	// load chart candles
+	chartCandles, err := s.Engine.Load(ctx, chartFrom, now)
+	if err != nil {
+		return nil, fmt.Errorf("can't load candles: %w", err)
+	}
+
+	// compute summary cards for fixed periods
+	type summarySpec struct {
+		label string
+		dur   time.Duration
+		isAll bool
+	}
+	specs := []summarySpec{
+		{label: "1 hour", dur: time.Hour},
+		{label: "24 hours", dur: 24 * time.Hour},
+		{label: "1 week", dur: 7 * 24 * time.Hour},
+		{label: "1 month", dur: 30 * 24 * time.Hour},
+		{label: "All time", isAll: true},
+	}
+
+	summaries := make([]SummaryData, 0, len(specs))
+	for _, sp := range specs {
+		var candles []store.Candle
+		if sp.isAll {
+			oldest, _, tErr := s.Engine.TimeRange(ctx)
+			if tErr != nil {
+				return nil, fmt.Errorf("can't get time range for summary: %w", tErr)
+			}
+			from := oldest
+			if from.IsZero() {
+				from = now
+			}
+			candles, err = s.Engine.Load(ctx, from, now)
+		} else {
+			candles, err = s.Engine.Load(ctx, now.Add(-sp.dur), now)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("can't load candles for %s: %w", sp.label, err)
+		}
+		summaries = append(summaries, SummaryData{Label: sp.label, Count: computeSummary(candles)})
+	}
+
+	// compute aggregation duration for chart (~100 points)
+	chartRange := now.Sub(chartFrom)
+	aggDuration := max(chartRange.Truncate(time.Second)/100, time.Minute)
+
+	data := &DashboardData{
+		Summaries:   summaries,
+		ChartJSON:   buildChartData(chartCandles, aggDuration),
+		Files:       computeTopFiles(chartCandles, 20),
+		Nodes:       computeNodeStats(chartCandles),
+		HeatmapJSON: buildHeatmapData(computeHeatmap(chartCandles)),
+		Period:      period,
+	}
+	return data, nil
 }
 
 // GET /api/candle?from=2022-04-06T05:06:17.041Z&to=2022-04-06T06:06:17.041Z&max_points=100&files=10
