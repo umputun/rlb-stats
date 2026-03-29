@@ -47,12 +47,6 @@
 <body>
     <main class="container">
         <h1>RLB Stats</h1>
-        <nav class="period-nav">
-            {{$p := .Period}}
-            {{range $val := list "1h" "12h" "24h" "10d" "30d" "all"}}
-            <button hx-get="/fragment/dashboard?period={{$val}}" hx-target="#dashboard" hx-swap="innerHTML"{{if eq $val $p}} aria-current="true" class="contrast"{{end}}>{{$val}}</button>
-            {{end}}
-        </nav>
         <div id="dashboard">
             {{template "dashboard" .}}
         </div>
