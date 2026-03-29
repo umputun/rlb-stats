@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"strconv"
 	"time"
@@ -106,6 +107,10 @@ func (s *Server) routes() http.Handler {
 		rUI.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, "webapp/favicon.ico")
 		})
+
+		// serve embedded static assets (charts.js)
+		staticSub, _ := fs.Sub(staticFS, "static")
+		rUI.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(staticSub)))
 	})
 
 	// API routes group

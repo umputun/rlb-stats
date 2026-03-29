@@ -78,6 +78,17 @@ func TestServerDashboard(t *testing.T) {
 		// the 24h button should have aria-current="true"
 		assert.Contains(t, string(body), "aria-current")
 	})
+
+	t.Run("GET /static/charts.js returns JS file", func(t *testing.T) {
+		resp, err := client.Get(goodServer.URL + "/static/charts.js")
+		require.NoError(t, err)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, resp.Body.Close())
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Contains(t, string(body), "initCharts")
+		assert.Contains(t, string(body), "htmx:afterSettle")
+	})
 }
 
 func TestServerDashboardBadEngine(t *testing.T) {
