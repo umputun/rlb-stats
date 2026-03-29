@@ -38,3 +38,24 @@ func (p *Aggregator) Store(entry LogRecord) (minuteCandle Candle, ok bool) {
 	p.entries = append(p.entries, entry)
 	return minuteCandle, ok
 }
+
+// Flush emits a candle from any buffered entries without waiting for a minute boundary.
+// returns false if no entries are buffered.
+func (p *Aggregator) Flush() (minuteCandle Candle, ok bool) {
+	if len(p.entries) == 0 {
+		return Candle{}, false
+	}
+
+	minuteCandle = NewCandle()
+	deduplicate := map[string]struct{}{}
+	for _, entry := range p.entries {
+		key := fmt.Sprintf("%s-%s", entry.FileName, entry.FromIP)
+		if _, dup := deduplicate[key]; dup {
+			continue
+		}
+		minuteCandle.Update(entry)
+		deduplicate[key] = struct{}{}
+	}
+	p.entries = nil
+	return minuteCandle, true
+}

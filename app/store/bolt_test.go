@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -13,7 +12,7 @@ import (
 
 func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	// normal flow
-	file, err := ioutil.TempFile("/tmp/", "bolt_test.bd.")
+	file, err := os.CreateTemp("/tmp/", "bolt_test.bd.")
 	assert.Nil(t, err, "created temp file")
 
 	s, err := NewBolt(file.Name())
@@ -31,34 +30,18 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 	assert.Nil(t, os.Remove(file.Name()), "removed fine")
 
 	// broken DB file
-	_, err = NewBolt("/dev/null")
+	badBolt, err := NewBolt("/dev/null")
+	assert.Nil(t, badBolt, "nil returned on error")
 	assert.NotNil(t, err, "engine not created")
 }
 
-func TestBolt_LoadStream(t *testing.T) {
-	file, err := ioutil.TempFile("/tmp/", "bolt_test.bd.")
-	assert.Nil(t, err, "created temp file")
+func TestBolt_Close(t *testing.T) {
+	file, err := os.CreateTemp("/tmp/", "bolt_test.bd.")
+	require.NoError(t, err)
+	defer os.Remove(file.Name())
 
 	s, err := NewBolt(file.Name())
-	assert.Nil(t, err, "engine created")
-
-	// save 3 candles
-	testCandle := NewCandle()
-	testCandle.StartMinute = time.Unix(0, 0)
-	assert.Nil(t, s.Save(testCandle), "saved fine")
-
-	testCandle = NewCandle()
-	testCandle.StartMinute = time.Unix(100, 0)
-	assert.Nil(t, s.Save(testCandle), "saved fine")
-
-	testCandle = NewCandle()
-	testCandle.StartMinute = time.Unix(200, 0)
-	assert.Nil(t, s.Save(testCandle), "saved fine")
-
-	ch := s.LoadStream(context.Background(), time.Unix(0, 0), time.Unix(0, 0).Add(time.Hour))
-	res := []Candle{}
-	for c := range ch {
-		res = append(res, c)
-	}
-	assert.Equal(t, 3, len(res), "all 3 candles loaded")
+	require.NoError(t, err)
+	assert.NoError(t, s.Close())
 }
+

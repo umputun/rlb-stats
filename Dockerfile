@@ -6,7 +6,7 @@ ARG GIT_BRANCH
 ARG SKIP_TEST
 ARG GITHUB_SHA
 
-ADD . /app
+COPY . /app
 WORKDIR /app
 
 # run tests
@@ -34,11 +34,10 @@ LABEL org.opencontainers.image.source="https://github.com/umputun/rlb-stats"
 RUN apk add --update ca-certificates && update-ca-certificates
 
 COPY --from=build /app/rlb-stats /srv/
-ADD webapp /srv/webapp
+COPY webapp /srv/webapp
 
 RUN chown -R app:app /srv
 USER app
 WORKDIR /srv
 
-CMD ["/srv/rlb-stats"]
 ENTRYPOINT ["/init.sh", "/srv/rlb-stats"]

@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -103,7 +102,7 @@ func startupEngine(t *testing.T, badEngine bool) (engine store.Engine, teardown 
 	if badEngine {
 		return MockDB{}, func() {}
 	}
-	file, err := ioutil.TempFile("/tmp/", "bolt_test.bd.")
+	file, err := os.CreateTemp("/tmp/", "bolt_test.bd.")
 	assert.Nil(t, err, "created temp file")
 	engine, err = store.NewBolt(file.Name())
 	assert.Nil(t, err, "engine created")
@@ -126,4 +125,61 @@ func (m MockDB) Save(candle store.Candle) error {
 
 func (m MockDB) Load(ctx context.Context, periodStart, periodEnd time.Time) ([]store.Candle, error) {
 	return nil, errors.New("test error")
+}
+
+// mockAggregator implements LogAggregator with configurable return values
+type mockAggregator struct {
+	candle store.Candle
+	ok     bool
+}
+
+func (m *mockAggregator) Store(store.LogRecord) (store.Candle, bool) {
+	return m.candle, m.ok
+}
+
+// goodDB implements store.Engine with successful Save
+type goodDB struct {
+	saved []store.Candle
+}
+
+func (g *goodDB) Save(candle store.Candle) error {
+	g.saved = append(g.saved, candle)
+	return nil
+}
+
+func (g *goodDB) Load(ctx context.Context, periodStart, periodEnd time.Time) ([]store.Candle, error) {
+	return g.saved, nil
+}
+
+func TestSaveLogRecord(t *testing.T) {
+	testCandle := store.Candle{
+		Nodes: map[string]store.Info{
+			"all": {Volume: 1, Files: map[string]int{"/test.mp3": 1}},
+		},
+		StartMinute: time.Unix(0, 0),
+	}
+
+	t.Run("aggregator returns candle, save succeeds", func(t *testing.T) {
+		db := &goodDB{}
+		agg := &mockAggregator{candle: testCandle, ok: true}
+		err := saveLogRecord(db, agg, store.LogRecord{})
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(db.saved))
+		assert.Equal(t, testCandle, db.saved[0])
+	})
+
+	t.Run("aggregator returns candle, save fails", func(t *testing.T) {
+		db := MockDB{} // always returns error
+		agg := &mockAggregator{candle: testCandle, ok: true}
+		err := saveLogRecord(db, agg, store.LogRecord{})
+		assert.EqualError(t, err, "test error")
+	})
+
+	t.Run("aggregator does not return candle", func(t *testing.T) {
+		db := &goodDB{}
+		agg := &mockAggregator{candle: store.Candle{}, ok: false}
+		err := saveLogRecord(db, agg, store.LogRecord{})
+		assert.NoError(t, err)
+		assert.Equal(t, 0, len(db.saved), "no save should be attempted")
+	})
 }
