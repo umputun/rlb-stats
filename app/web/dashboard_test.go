@@ -1,7 +1,10 @@
 package web
 
 import (
+	"bytes"
 	"encoding/json"
+	"html/template"
+	"os"
 	"testing"
 	"time"
 
@@ -533,4 +536,63 @@ func TestBuildHeatmapData(t *testing.T) {
 			tc.checks(t, string(result))
 		})
 	}
+}
+
+func TestTemplateParse(t *testing.T) {
+	templatesFS := os.DirFS("templates")
+
+	funcMap := template.FuncMap{
+		"list": func(args ...string) []string { return args },
+		"inc":  func(i int) int { return i + 1 },
+	}
+
+	tmpl, err := template.New("").Funcs(funcMap).ParseFS(templatesFS, "*.html", "partials/*.html")
+	require.NoError(t, err, "templates must parse without errors")
+
+	// verify all expected templates are present
+	expectedTemplates := []string{"dashboard", "summary", "chart", "files", "nodes", "heatmap"}
+	for _, name := range expectedTemplates {
+		assert.NotNil(t, tmpl.Lookup(name), "template %q should be defined", name)
+	}
+}
+
+func TestTemplateRender(t *testing.T) {
+	templatesFS := os.DirFS("templates")
+
+	funcMap := template.FuncMap{
+		"list": func(args ...string) []string { return args },
+		"inc":  func(i int) int { return i + 1 },
+	}
+
+	tmpl, err := template.New("layout.html").Funcs(funcMap).ParseFS(templatesFS, "*.html", "partials/*.html")
+	require.NoError(t, err)
+
+	data := DashboardData{
+		Summaries: []SummaryData{
+			{Label: "1 hour", Count: 100},
+			{Label: "24 hours", Count: 500},
+		},
+		ChartJSON:   template.JS(`{"xAxis":{"type":"time"}}`),
+		Files:       []FileStats{{Name: "file1.mp3", Count: 10, Percent: 100}},
+		Nodes:       []NodeStats{{Name: "node1", Volume: 50, Percent: 100}},
+		HeatmapJSON: template.JS(`{"xAxis":{"type":"category"}}`),
+		Period:      "24h",
+	}
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	require.NoError(t, err, "layout template must render without errors")
+
+	html := buf.String()
+	assert.Contains(t, html, "RLB Stats")
+	assert.Contains(t, html, "picocss")
+	assert.Contains(t, html, "echarts")
+	assert.Contains(t, html, "htmx")
+	assert.Contains(t, html, "100")                 // summary count
+	assert.Contains(t, html, "1 hour")              // summary label
+	assert.Contains(t, html, "file1.mp3")           // file name
+	assert.Contains(t, html, "node1")               // node name
+	assert.Contains(t, html, `aria-current="true"`) // active period button
+	assert.Contains(t, html, "chart-data")          // chart JSON container
+	assert.Contains(t, html, "heatmap-data")        // heatmap JSON container
 }

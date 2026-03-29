@@ -1,0 +1,8 @@
+{{define "heatmap"}}
+<section>
+    <h2>Peak Hours</h2>
+    <div id="heatmap-chart" class="chart-container" data-echarts>
+    </div>
+    <script type="application/json" id="heatmap-data">{{.HeatmapJSON}}</script>
+</section>
+{{end}}
