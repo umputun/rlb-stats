@@ -127,6 +127,10 @@ func (m MockDB) Load(ctx context.Context, periodStart, periodEnd time.Time) ([]s
 	return nil, errors.New("test error")
 }
 
+func (m MockDB) TimeRange(ctx context.Context) (oldest, newest time.Time, err error) {
+	return time.Time{}, time.Time{}, errors.New("test error")
+}
+
 // mockAggregator implements LogAggregator with configurable return values
 type mockAggregator struct {
 	candle store.Candle
@@ -149,6 +153,15 @@ func (g *goodDB) Save(candle store.Candle) error {
 
 func (g *goodDB) Load(ctx context.Context, periodStart, periodEnd time.Time) ([]store.Candle, error) {
 	return g.saved, nil
+}
+
+func (g *goodDB) TimeRange(ctx context.Context) (oldest, newest time.Time, err error) {
+	if len(g.saved) == 0 {
+		return time.Time{}, time.Time{}, nil
+	}
+	oldest = g.saved[0].StartMinute
+	newest = g.saved[len(g.saved)-1].StartMinute
+	return oldest, newest, nil
 }
 
 func TestSaveLogRecord(t *testing.T) {

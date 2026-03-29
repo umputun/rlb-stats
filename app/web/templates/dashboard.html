@@ -1,0 +1,13 @@
+{{define "dashboard"}}
+<nav class="period-nav">
+    {{$p := .Period}}
+    {{range $val := list "1h" "12h" "24h" "10d" "30d" "all"}}
+    <button hx-get="/fragment/dashboard?period={{$val}}" hx-target="#dashboard" hx-swap="innerHTML"{{if eq $val $p}} aria-current="true" class="contrast"{{end}}>{{$val}}</button>
+    {{end}}
+</nav>
+{{template "summary" .}}
+{{template "chart" .}}
+{{template "files" .}}
+{{template "nodes" .}}
+{{template "heatmap" .}}
+{{end}}

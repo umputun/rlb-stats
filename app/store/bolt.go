@@ -60,6 +60,42 @@ func (s *Bolt) Save(candle Candle) (err error) {
 	return nil
 }
 
+// TimeRange returns the oldest and newest candle timestamps in the store.
+// returns zero times with no error if the bucket is empty.
+func (s *Bolt) TimeRange(ctx context.Context) (oldest, newest time.Time, err error) {
+	err = s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucket)
+		c := b.Cursor()
+
+		firstKey, _ := c.First()
+		if firstKey == nil {
+			return nil // empty bucket
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		var firstUnix int64
+		if _, scanErr := fmt.Sscanf(string(firstKey), "%d", &firstUnix); scanErr != nil {
+			return fmt.Errorf("parse oldest key %q: %w", firstKey, scanErr)
+		}
+		oldest = time.Unix(firstUnix, 0)
+
+		lastKey, _ := c.Last()
+		var lastUnix int64
+		if _, scanErr := fmt.Sscanf(string(lastKey), "%d", &lastUnix); scanErr != nil {
+			return fmt.Errorf("parse newest key %q: %w", lastKey, scanErr)
+		}
+		newest = time.Unix(lastUnix, 0)
+
+		return nil
+	})
+	return oldest, newest, err
+}
+
 // Load Candles by period
 func (s *Bolt) Load(ctx context.Context, periodStart, periodEnd time.Time) (result []Candle, err error) {
 	result = []Candle{}
