@@ -274,6 +274,11 @@ func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, err, "can't parse 'max_points' field")
 			return
 		}
+		if i <= 0 {
+			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest,
+				errors.New("max_points must be positive"), "can't parse 'max_points' field")
+			return
+		}
 		aggDuration = toTime.Sub(fromTime).Truncate(time.Second) / time.Duration(i)
 	}
 

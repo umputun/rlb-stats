@@ -24,7 +24,7 @@ Open [http://127.0.0.1:8080/api/candle](http://127.0.0.1:8080/api/candle?from=20
 endpoint from to see all aggregated logs since the start of the container.
 
 ### Dashboard
-Open http://127.0.0.1:8080/ to see the dashboard. The dashboard is server-side rendered using HTMX, Picocss and ECharts. It provides:
+Open http://127.0.0.1:8080/ to see the dashboard. The dashboard is server-side rendered using HTMX, Picocss and ECharts and is embedded in the binary (the old SPA frontend from `webapp/` has been removed). The dashboard requires internet access to load CSS and JavaScript libraries from cdn.jsdelivr.net. It provides:
 
 - Summary cards showing total downloads for 1 hour, 24 hours, 1 week, 1 month and all time
 - Downloads histogram (ECharts bar chart) with selectable time periods (1h, 12h, 24h, 10d, 30d, all)
@@ -38,7 +38,7 @@ Period switching is handled via HTMX without full page reloads. Dark mode is sup
 
 | Command line   | Environment    | Default                       | Description                     |
 | ---------------| ---------------| ------------------------------| ------------------------------- |
-| port           | PORT           | `80`                          | Web server port                 |
+| port           | PORT           | `8080`                        | Web server port                 |
 | bolt           | BOLT_FILE      | `/tmp/rlb-stats.bd`           | boltdb file path                |
 | dbg            | DEBUG          | `false`                       | debug mode                      |
 |                | TIME_ZONE      | `America/Chicago`             | container timezone              |
