@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,10 +19,15 @@ import (
 	"github.com/umputun/rlb-stats/app/store"
 )
 
+// LogAggregator buffers log records and emits minute candles
+type LogAggregator interface {
+	Store(store.LogRecord) (store.Candle, bool)
+}
+
 // Server is a web-server for rlb-stats REST API and UI
 type Server struct {
 	Engine       store.Engine
-	Aggregator   *store.Aggregator
+	Aggregator   LogAggregator
 	Port         int
 	Version      string
 	address      string // set only in tests
@@ -31,8 +37,8 @@ type Server struct {
 // JSON is a map alias, just for convenience
 type JSON map[string]any
 
-// Run starts a web-server
-func (s *Server) Run() {
+// Run starts a web-server and blocks until ctx is cancelled, then shuts down gracefully
+func (s *Server) Run(ctx context.Context) {
 	log.Printf("[INFO] activate web server on port %v", s.Port)
 	srv := http.Server{
 		Addr:              fmt.Sprintf("%v:%v", s.address, s.Port),
@@ -41,7 +47,21 @@ func (s *Server) Run() {
 		ReadTimeout:       5 * time.Minute,
 		WriteTimeout:      5 * time.Minute,
 	}
-	log.Printf("[WARN] http server terminated, %s", srv.ListenAndServe())
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("[WARN] http server terminated, %s", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Printf("[INFO] shutting down http server")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("[WARN] http server shutdown error, %s", err)
+	}
 }
 
 func (s *Server) routes() http.Handler {
@@ -86,14 +106,14 @@ func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	}
 	fromTime, err := time.Parse(time.RFC3339, from)
 	if err != nil {
-		rest.SendErrorJSON(w, r, log.Default(), http.StatusExpectationFailed, err, "can't parse 'from' field")
+		rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, err, "can't parse 'from' field")
 		return
 	}
 	toTime := time.Now()
 	if to := r.URL.Query().Get("to"); to != "" {
 		t, terr := time.Parse(time.RFC3339, to)
 		if terr != nil {
-			rest.SendErrorJSON(w, r, log.Default(), http.StatusExpectationFailed, terr, "can't parse 'to' field")
+			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, terr, "can't parse 'to' field")
 			return
 		}
 		toTime = t
@@ -102,14 +122,14 @@ func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	if a := r.URL.Query().Get("aggregate"); a != "" {
 		aggDuration, err = time.ParseDuration(a)
 		if err != nil {
-			rest.SendErrorJSON(w, r, log.Default(), http.StatusExpectationFailed, err, "can't parse 'aggregate' field")
+			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, err, "can't parse 'aggregate' field")
 			return
 		}
 	}
 	if n := r.URL.Query().Get("max_points"); n != "" {
 		i, err := strconv.ParseInt(n, 10, 8)
 		if err != nil {
-			rest.SendErrorJSON(w, r, log.Default(), http.StatusExpectationFailed, err, "can't parse 'max_points' field")
+			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, err, "can't parse 'max_points' field")
 			return
 		}
 		aggDuration = toTime.Sub(fromTime).Truncate(time.Second) / time.Duration(i)
@@ -123,7 +143,7 @@ func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 	if files := r.URL.Query().Get("files"); files != "" {
 		filesN, err := strconv.Atoi(files)
 		if err != nil {
-			rest.SendErrorJSON(w, r, log.Default(), http.StatusExpectationFailed, err, "can't parse 'files' field")
+			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, err, "can't parse 'files' field")
 			return
 		}
 		candles = limitCandleFiles(candles, filesN)

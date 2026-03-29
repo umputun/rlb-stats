@@ -2,10 +2,10 @@ package web
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -40,7 +40,7 @@ func TestServerUI(t *testing.T) {
 			require.NoError(t, err, i)
 			b, err := client.Do(req)
 			require.NoError(t, err, i)
-			body, err := ioutil.ReadAll(b.Body)
+			body, err := io.ReadAll(b.Body)
 			require.NoError(t, b.Body.Close())
 			require.NoError(t, err, i)
 			assert.Equal(t, x.responseCode, b.StatusCode, string(body))
@@ -67,18 +67,20 @@ func TestServerAPI(t *testing.T) {
 	}{
 		{ts: goodServer, url: "/api/candle", responseCode: http.StatusBadRequest,
 			result: "{\"error\":\"no 'from' field passed\"}\n"},
-		{ts: goodServer, url: "/api/candle?from=bad", responseCode: http.StatusExpectationFailed,
+		{ts: goodServer, url: "/api/candle?from=bad", responseCode: http.StatusBadRequest,
 			result: "{\"error\":\"can't parse 'from' field\"}\n"},
-		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&to=bad", startTime), responseCode: http.StatusExpectationFailed,
+		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&to=bad", startTime), responseCode: http.StatusBadRequest,
 			result: "{\"error\":\"can't parse 'to' field\"}\n"},
-		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&aggregate=bad", startTime), responseCode: http.StatusExpectationFailed,
+		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&aggregate=bad", startTime), responseCode: http.StatusBadRequest,
 			result: "{\"error\":\"can't parse 'aggregate' field\"}\n"},
-		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=256", startTime), responseCode: http.StatusExpectationFailed,
+		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=256", startTime), responseCode: http.StatusBadRequest,
 			result: "{\"error\":\"can't parse 'max_points' field\"}\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v", startTime, startTime), responseCode: http.StatusOK,
 			result: "[]\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v", startTime), responseCode: http.StatusOK,
 			candles: []store.Candle{storedCandle}},
+		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&files=bad", startTime), responseCode: http.StatusBadRequest,
+			result: "{\"error\":\"can't parse 'files' field\"}\n"},
 		{ts: badServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v&aggregate=5m&max_points=10", startTime, url.QueryEscape(endTime)), responseCode: http.StatusBadRequest,
 			result: "{\"error\":\"can't load candles\"}\n"},
 		{ts: goodServer, url: "/api/insert", responseCode: http.StatusBadRequest, method: http.MethodPost,
@@ -113,7 +115,7 @@ func TestServerAPI(t *testing.T) {
 			b, err := client.Do(req)
 			require.NoError(t, err, i)
 			defer b.Body.Close()
-			body, err := ioutil.ReadAll(b.Body)
+			body, err := io.ReadAll(b.Body)
 			require.NoError(t, err, i)
 			if x.result != "" {
 				assert.Equal(t, x.result, string(body), i)
@@ -122,12 +124,46 @@ func TestServerAPI(t *testing.T) {
 				var candles []store.Candle
 				err = json.Unmarshal(body, &candles)
 				if err != nil {
-					require.Nil(t, string(body), "problem parsing response body")
+					require.NoError(t, err, "problem parsing response body: %s", string(body))
 				}
 				assert.Equal(t, x.candles, candles, i)
 			}
 			assert.Equal(t, x.responseCode, b.StatusCode, string(body))
 		})
+	}
+}
+
+func TestServerRunShutdown(t *testing.T) {
+	storage, teardown := startupEngine(t, false)
+	defer teardown()
+
+	srv := &Server{
+		address:    "127.0.0.1",
+		Engine:     storage,
+		Aggregator: &store.Aggregator{},
+		Port:       0, // will use address from test
+		Version:    "test",
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	done := make(chan struct{})
+	go func() {
+		srv.Run(ctx)
+		close(done)
+	}()
+
+	// give server time to start
+	time.Sleep(50 * time.Millisecond)
+
+	// cancel context to trigger shutdown
+	cancel()
+
+	select {
+	case <-done:
+		// server shut down cleanly
+	case <-time.After(3 * time.Second):
+		t.Fatal("server did not shut down within 3 seconds")
 	}
 }
 

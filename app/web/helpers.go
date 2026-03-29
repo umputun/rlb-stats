@@ -23,7 +23,7 @@ func loadCandles(ctx context.Context, engine store.Engine, from time.Time, to ti
 }
 
 // saveLogRecord saves a log record to candle
-func saveLogRecord(engine store.Engine, parser *store.Aggregator, l store.LogRecord) error {
+func saveLogRecord(engine store.Engine, parser LogAggregator, l store.LogRecord) error {
 	if candle, ok := parser.Store(l); ok { // Store returns ok in case candle is ready
 		return engine.Save(candle)
 	}
