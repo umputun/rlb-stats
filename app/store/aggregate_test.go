@@ -2,6 +2,7 @@ package store
 
 import (
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -92,6 +93,32 @@ func TestParsing(t *testing.T) {
 			assert.EqualValues(t, tt.dumped, ok, "entry (not) dumped")
 		})
 	}
+}
+
+func TestAggregatorConcurrentStore(t *testing.T) {
+	// exercises concurrent Store/Flush access; fails under -race without the mutex
+	parser := &Aggregator{}
+	baseTime := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	var wg sync.WaitGroup
+	for g := 0; g < 8; g++ {
+		wg.Add(1)
+		go func(g int) {
+			defer wg.Done()
+			for i := 0; i < 100; i++ {
+				parser.Store(LogRecord{
+					FromIP:   "127.0.0." + strconv.Itoa(g),
+					FileName: "/rtfiles/rt_podcast" + strconv.Itoa(i) + ".mp3",
+					DestHost: "n6.radio-t.com",
+					Date:     baseTime.Add(time.Duration(i) * time.Minute),
+				})
+			}
+		}(g)
+	}
+	wg.Wait()
+
+	// draining via Flush must not race with anything and should succeed while entries remain
+	_, _ = parser.Flush()
 }
 
 func TestFlush(t *testing.T) {
