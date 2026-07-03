@@ -81,6 +81,8 @@ func TestServerAPI(t *testing.T) {
 			result: "{\"error\":\"can't parse 'max_points' field\"}\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&aggregate=5m&max_points=0", startTime), responseCode: http.StatusOK,
 			candles: []store.Candle{storedCandle}},
+		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=5", startTime), responseCode: http.StatusOK,
+			candles: []store.Candle{storedCandle}},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v", startTime, startTime), responseCode: http.StatusOK,
 			result: "[]\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v", startTime), responseCode: http.StatusOK,
