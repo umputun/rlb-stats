@@ -39,6 +39,35 @@ func NewCandle() (c Candle) {
 	return c
 }
 
+// mergeCandles combines the per-node volumes and file counts of base and add into a
+// single candle, keeping add's StartMinute. used to accumulate multiple writes for the
+// same minute instead of overwriting one with another.
+//
+// this runs only on the abnormal path where a minute is saved twice (flush-on-shutdown
+// then restart, or a minute split across concurrent inserts); normal operation saves
+// each minute once and never merges. counts are summed, so an ip+file pair that appears
+// in both fragments is counted more than once - accepted as a best-effort recovery,
+// since the alternative (overwrite) drops the earlier fragment entirely. exact
+// cross-fragment de-duplication would require persisting the dedup keys.
+func mergeCandles(base, add Candle) Candle {
+	merged := NewCandle()
+	merged.StartMinute = add.StartMinute
+	for _, src := range []Candle{base, add} {
+		for name, info := range src.Nodes {
+			node, ok := merged.Nodes[name]
+			if !ok {
+				node = NewInfo()
+			}
+			node.Volume += info.Volume
+			for file, count := range info.Files {
+				node.Files[file] += count
+			}
+			merged.Nodes[name] = node
+		}
+	}
+	return merged
+}
+
 // Update log destination node and add same stats to "all" node
 func (c *Candle) Update(l LogRecord) {
 	for _, nodeName := range []string{l.DestHost, "all"} {
