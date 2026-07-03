@@ -24,16 +24,18 @@ func aggregateCandles(ctx context.Context, candles []store.Candle, aggInterval t
 	}
 	aggInterval = aggInterval.Truncate(time.Minute)
 
+	// work on a time-ordered copy: bucket-boundary cancellation relies on candles being
+	// sorted, and store.Engine does not guarantee ordering. sorting here keeps the result
+	// (and the cancellation contract) correct regardless of the engine's iteration order
+	ordered := make([]store.Candle, len(candles))
+	copy(ordered, candles)
+	sort.Slice(ordered, func(i, j int) bool { return ordered[i].StartMinute.Before(ordered[j].StartMinute) })
+
 	// bucket origin is the earliest candle; window k spans [origin+k*interval, origin+(k+1)*interval)
-	origin := candles[0].StartMinute
-	for _, c := range candles {
-		if c.StartMinute.Before(origin) {
-			origin = c.StartMinute
-		}
-	}
+	origin := ordered[0].StartMinute
 
 	buckets := map[time.Time]store.Candle{}
-	order := make([]time.Time, 0, len(candles))
+	order := make([]time.Time, 0, len(ordered))
 
 	// emit returns the aggregated buckets ordered by time, skipping empty ones.
 	// used both on normal completion and on cancellation, so an aborted request
@@ -48,17 +50,20 @@ func aggregateCandles(ctx context.Context, candles []store.Candle, aggInterval t
 		return result
 	}
 
-	for _, c := range candles {
-		select {
-		case <-ctx.Done():
-			return emit()
-		default:
-		}
+	for _, c := range ordered {
 		// integer window index; the Duration holds the count, so idx*aggInterval is the offset
 		idx := c.StartMinute.Sub(origin) / aggInterval
 		bucketTime := origin.Add(idx * aggInterval)
 		agg, ok := buckets[bucketTime]
 		if !ok {
+			// honour cancellation only at bucket boundaries so a cancelled request never
+			// yields a partially-filled bucket; candles are processed in time order (sorted
+			// above), so every earlier bucket is already complete here
+			select {
+			case <-ctx.Done():
+				return emit()
+			default:
+			}
 			agg = store.NewCandle()
 			agg.StartMinute = bucketTime
 			order = append(order, bucketTime)
