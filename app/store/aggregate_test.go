@@ -96,7 +96,7 @@ func TestParsing(t *testing.T) {
 }
 
 func TestAggregatorConcurrentStore(t *testing.T) {
-	// exercises concurrent Store/Flush access; fails under -race without the mutex
+	// exercises concurrent Store calls on a shared Aggregator; fails under -race without the mutex
 	parser := &Aggregator{}
 	baseTime := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
 
@@ -117,8 +117,10 @@ func TestAggregatorConcurrentStore(t *testing.T) {
 	}
 	wg.Wait()
 
-	// draining via Flush must not race with anything and should succeed while entries remain
-	_, _ = parser.Flush()
+	// the last stored entry is still buffered, so draining via Flush must emit a candle
+	candle, ok := parser.Flush()
+	assert.True(t, ok, "buffered entries remain after the stores, so Flush must emit a candle")
+	assert.NotEmpty(t, candle.Nodes)
 }
 
 func TestFlush(t *testing.T) {
