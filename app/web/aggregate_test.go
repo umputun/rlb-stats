@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/umputun/rlb-stats/app/store"
 )
@@ -133,4 +134,25 @@ func TestAggregation(t *testing.T) {
 	// test less than 1 minute period which should have same output as 1 minute aggregation
 	testSlice := aggregateCandles(context.Background(), testCandles, time.Nanosecond)
 	assert.EqualValues(t, testCandles, testSlice, "candle aggregate for 1 nanosecond match with expected output")
+}
+
+func TestAggregateCandlesEdgeCases(t *testing.T) {
+	t.Run("cancelled context returns without processing", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		got := aggregateCandles(ctx, testCandles, time.Minute)
+		assert.Equal(t, []store.Candle{}, got, "cancelled before any bucket is filled")
+	})
+
+	t.Run("candles with no nodes produce no bucket", func(t *testing.T) {
+		candles := []store.Candle{
+			{StartMinute: time.Time{}, Nodes: map[string]store.Info{}},
+			{StartMinute: time.Time{}.Add(time.Minute), Nodes: map[string]store.Info{
+				"all": {Volume: 1, Files: map[string]int{"a.mp3": 1}},
+			}},
+		}
+		got := aggregateCandles(context.Background(), candles, time.Minute)
+		require.Len(t, got, 1, "empty-node candle is skipped, only the real one remains")
+		assert.Equal(t, time.Time{}.Add(time.Minute), got[0].StartMinute)
+	})
 }
