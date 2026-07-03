@@ -69,14 +69,17 @@ type badRequestError struct{ msg string }
 
 func (e *badRequestError) Error() string { return e.msg }
 
+// periodAll is the period selector that spans the whole store via TimeRange
+const periodAll = "all"
+
 // validPeriods maps period parameter values to their durations
 var validPeriods = map[string]time.Duration{
-	"1h":  time.Hour,
-	"12h": 12 * time.Hour,
-	"24h": 24 * time.Hour,
-	"10d": 10 * 24 * time.Hour,
-	"30d": 30 * 24 * time.Hour,
-	"all": 0, // special case, uses TimeRange
+	"1h":      time.Hour,
+	"12h":     12 * time.Hour,
+	"24h":     24 * time.Hour,
+	"10d":     10 * 24 * time.Hour,
+	"30d":     30 * 24 * time.Hour,
+	periodAll: 0, // special case, uses TimeRange
 }
 
 func (s *Server) parseTemplates() {
@@ -133,39 +136,31 @@ func (s *Server) routes() http.Handler {
 
 // dashboardPage renders the full dashboard HTML page (GET /)
 func (s *Server) dashboardPage(w http.ResponseWriter, r *http.Request) {
-	data, err := s.buildDashboardData(r)
-	if err != nil {
-		var bre *badRequestError
-		if errors.As(err, &bre) {
-			http.Error(w, bre.msg, http.StatusBadRequest)
-		} else {
-			log.Printf("[WARN] dashboard page error, %s", err)
-			http.Error(w, "failed to load dashboard data", http.StatusInternalServerError)
-		}
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := s.templates.ExecuteTemplate(w, "layout.html", data); err != nil {
-		log.Printf("[WARN] failed to render dashboard page, %s", err)
-	}
+	s.renderDashboard(w, r, "layout.html")
 }
 
 // dashboardFragment renders only the dashboard content for HTMX swap (GET /fragment/dashboard)
 func (s *Server) dashboardFragment(w http.ResponseWriter, r *http.Request) {
+	s.renderDashboard(w, r, "dashboard")
+}
+
+// renderDashboard builds dashboard data and renders it with the given template,
+// mapping bad-request errors to 400 and everything else to 500
+func (s *Server) renderDashboard(w http.ResponseWriter, r *http.Request, tmpl string) {
 	data, err := s.buildDashboardData(r)
 	if err != nil {
 		var bre *badRequestError
 		if errors.As(err, &bre) {
 			http.Error(w, bre.msg, http.StatusBadRequest)
 		} else {
-			log.Printf("[WARN] dashboard fragment error, %s", err)
+			log.Printf("[WARN] dashboard error, %s", err)
 			http.Error(w, "failed to load dashboard data", http.StatusInternalServerError)
 		}
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := s.templates.ExecuteTemplate(w, "dashboard", data); err != nil {
-		log.Printf("[WARN] failed to render dashboard fragment, %s", err)
+	if err := s.templates.ExecuteTemplate(w, tmpl, data); err != nil {
+		log.Printf("[WARN] failed to render dashboard %s, %s", tmpl, err)
 	}
 }
 
@@ -183,35 +178,35 @@ func (s *Server) buildDashboardData(r *http.Request) (*DashboardData, error) {
 	ctx := r.Context()
 	now := time.Now()
 
-	// determine chart time range
-	var chartFrom time.Time
-	if period == "all" {
-		oldest, _, err := s.Engine.TimeRange(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("can't get time range: %w", err)
-		}
-		if oldest.IsZero() {
-			chartFrom = now
-		} else {
-			chartFrom = oldest
-		}
-	} else {
-		chartFrom = now.Add(-dur)
+	// oldest timestamp in the store, used for the all-time summary and the "all" chart period
+	oldest, _, err := s.Engine.TimeRange(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("can't get time range: %w", err)
+	}
+	if oldest.IsZero() {
+		oldest = now
 	}
 
-	// load chart candles
-	chartCandles, err := s.Engine.Load(ctx, chartFrom, now)
+	// load the full history once; the chart window and every summary are derived from it in memory
+	allCandles, err := s.Engine.Load(ctx, oldest, now)
 	if err != nil {
 		return nil, fmt.Errorf("can't load candles: %w", err)
 	}
 
-	// compute summary cards for fixed periods
-	type summarySpec struct {
+	// chart time range: whole history for "all", otherwise a trailing window.
+	// allCandles is sorted ascending by StartMinute, so trailing windows are subslices, not copies
+	chartFrom := now.Add(-dur)
+	if period == periodAll {
+		chartFrom = oldest
+	}
+	chartCandles := allCandles[firstIndexSince(allCandles, chartFrom):]
+
+	// summary cards for fixed trailing windows plus all-time, all derived from allCandles
+	specs := []struct {
 		label string
 		dur   time.Duration
 		isAll bool
-	}
-	specs := []summarySpec{
+	}{
 		{label: "1 hour", dur: time.Hour},
 		{label: "24 hours", dur: 24 * time.Hour},
 		{label: "1 week", dur: 7 * 24 * time.Hour},
@@ -221,22 +216,9 @@ func (s *Server) buildDashboardData(r *http.Request) (*DashboardData, error) {
 
 	summaries := make([]SummaryData, 0, len(specs))
 	for _, sp := range specs {
-		var candles []store.Candle
-		if sp.isAll {
-			oldest, _, tErr := s.Engine.TimeRange(ctx)
-			if tErr != nil {
-				return nil, fmt.Errorf("can't get time range for summary: %w", tErr)
-			}
-			from := oldest
-			if from.IsZero() {
-				from = now
-			}
-			candles, err = s.Engine.Load(ctx, from, now)
-		} else {
-			candles, err = s.Engine.Load(ctx, now.Add(-sp.dur), now)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("can't load candles for %s: %w", sp.label, err)
+		candles := allCandles
+		if !sp.isAll {
+			candles = allCandles[firstIndexSince(allCandles, now.Add(-sp.dur)):]
 		}
 		summaries = append(summaries, SummaryData{Label: sp.label, Count: computeSummary(candles)})
 	}

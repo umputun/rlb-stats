@@ -48,11 +48,20 @@ type HeatmapCell struct {
 	Value   int
 }
 
+// firstIndexSince returns the index of the first candle at or after from,
+// assuming candles are sorted ascending by StartMinute (bolt key order).
+// callers subslice candles[idx:] to view a trailing window without copying.
+func firstIndexSince(candles []store.Candle, from time.Time) int {
+	return sort.Search(len(candles), func(i int) bool {
+		return !candles[i].StartMinute.Before(from)
+	})
+}
+
 // computeSummary sums the "all" node Volume across candles
 func computeSummary(candles []store.Candle) int {
 	total := 0
 	for _, c := range candles {
-		if info, ok := c.Nodes["all"]; ok {
+		if info, ok := c.Nodes[store.AllNode]; ok {
 			total += info.Volume
 		}
 	}
@@ -64,7 +73,7 @@ func computeSummary(candles []store.Candle) int {
 func computeTopFiles(candles []store.Candle, limit int) []FileStats {
 	counts := map[string]int{}
 	for _, c := range candles {
-		if info, ok := c.Nodes["all"]; ok {
+		if info, ok := c.Nodes[store.AllNode]; ok {
 			for name, count := range info.Files {
 				counts[name] += count
 			}
@@ -102,7 +111,7 @@ func computeNodeStats(candles []store.Candle) []NodeStats {
 	volumes := map[string]int{}
 	for _, c := range candles {
 		for name, info := range c.Nodes {
-			if name == "all" {
+			if name == store.AllNode {
 				continue
 			}
 			volumes[name] += info.Volume
@@ -142,7 +151,7 @@ func computeHeatmap(candles []store.Candle) []HeatmapCell {
 		// convert to Monday=0 ... Sunday=6
 		wd = (wd + 6) % 7
 
-		if info, ok := c.Nodes["all"]; ok {
+		if info, ok := c.Nodes[store.AllNode]; ok {
 			grid[hour][wd] += info.Volume
 		}
 	}
@@ -219,7 +228,7 @@ func buildChartData(ctx context.Context, candles []store.Candle, aggDuration tim
 	data := make([][]any, 0, len(aggregated))
 	for _, c := range aggregated {
 		vol := 0
-		if info, ok := c.Nodes["all"]; ok {
+		if info, ok := c.Nodes[store.AllNode]; ok {
 			vol = info.Volume
 		}
 		data = append(data, []any{c.StartMinute.UnixMilli(), vol})

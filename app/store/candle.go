@@ -4,6 +4,9 @@ import (
 	"time"
 )
 
+// AllNode is the synthetic node name aggregating stats across every destination node
+const AllNode = "all"
+
 // Candle contain one minute candle from log entries for that period
 type Candle struct {
 	Nodes       map[string]Info
@@ -70,12 +73,12 @@ func mergeCandles(base, add Candle) Candle {
 
 // Update log destination node and add same stats to "all" node
 func (c *Candle) Update(l LogRecord) {
-	for _, nodeName := range []string{l.DestHost, "all"} {
+	for _, nodeName := range []string{l.DestHost, AllNode} {
 		node, ok := c.Nodes[nodeName]
 		if !ok {
 			node = NewInfo()
 		}
-		if nodeName == "all" { // we keep all files in "all" node only
+		if nodeName == AllNode { // we keep all files in AllNode only
 			node.Files[l.FileName]++
 		}
 		node.Volume++
