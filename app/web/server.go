@@ -169,6 +169,12 @@ func (s *Server) insert(w http.ResponseWriter, r *http.Request) {
 		rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, errors.New("missing field in JSON"), "missing field in JSON: dest")
 		return
 	}
+	// "all" is the synthetic node the aggregator writes every record into; accepting it as a real
+	// dest would double-count into that bucket and corrupt the aggregate stats, so it is reserved
+	if l.DestHost == "all" {
+		rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, errors.New("reserved dest"), "dest 'all' is reserved")
+		return
+	}
 	if l.FileName == "" {
 		rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, errors.New("missing field in JSON"), "missing field in JSON: file_name")
 		return
