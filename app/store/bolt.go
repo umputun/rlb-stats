@@ -53,9 +53,12 @@ func (s *Bolt) Save(candle Candle) (err error) {
 		if existing := b.Get(key); existing != nil {
 			var prev Candle
 			if e := json.Unmarshal(existing, &prev); e != nil {
-				return e
+				// existing entry is unreadable; overwrite it rather than failing the save
+				// and losing the new candle too
+				log.Printf("[WARN] can't unmarshal stored candle for key %s, overwriting: %s", key, e)
+			} else {
+				candle = mergeCandles(prev, candle)
 			}
-			candle = mergeCandles(prev, candle)
 		}
 		jdata, jerr := json.Marshal(candle)
 		if jerr != nil {

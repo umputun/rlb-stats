@@ -2,12 +2,14 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	bolt "go.etcd.io/bbolt"
 )
 
 func TestSaveAndLoadLogEntryBolt(t *testing.T) {
@@ -38,6 +40,7 @@ func TestSaveAndLoadLogEntryBolt(t *testing.T) {
 func TestBolt_SaveMergesSameMinute(t *testing.T) {
 	file, err := os.CreateTemp("/tmp/", "bolt_test.bd.")
 	require.NoError(t, err)
+	require.NoError(t, file.Close())
 	defer os.Remove(file.Name())
 
 	s, err := NewBolt(file.Name())
@@ -76,6 +79,36 @@ func TestBolt_SaveMergesSameMinute(t *testing.T) {
 	assert.Equal(t, 6, got.Nodes["all"].Volume, "all volume summed")
 	assert.Equal(t, 3, got.Nodes["all"].Files["a.mp3"])
 	assert.Equal(t, 3, got.Nodes["all"].Files["b.mp3"])
+}
+
+func TestBolt_SaveOverwritesCorruptEntry(t *testing.T) {
+	file, err := os.CreateTemp("/tmp/", "bolt_test.bd.")
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
+	defer os.Remove(file.Name())
+
+	s, err := NewBolt(file.Name())
+	require.NoError(t, err)
+	defer s.Close()
+
+	minute := time.Unix(0, 0)
+	key := fmt.Appendf(nil, "%d", minute.Unix())
+
+	// plant a corrupt (non-JSON) value at the key
+	require.NoError(t, s.db.Update(func(tx *bolt.Tx) error {
+		return tx.Bucket(bucket).Put(key, []byte("not json"))
+	}))
+
+	candle := Candle{StartMinute: minute, Nodes: map[string]Info{
+		"all": {Volume: 5, Files: map[string]int{"a.mp3": 5}},
+	}}
+	// save must overwrite the unreadable entry rather than fail
+	require.NoError(t, s.Save(candle))
+
+	loaded, err := s.Load(context.Background(), minute, minute.Add(time.Hour))
+	require.NoError(t, err)
+	require.Len(t, loaded, 1)
+	assert.Equal(t, 5, loaded[0].Nodes["all"].Volume, "corrupt entry overwritten with the new candle")
 }
 
 func TestBolt_Close(t *testing.T) {
