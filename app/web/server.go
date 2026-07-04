@@ -132,7 +132,7 @@ func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 		i, perr := strconv.ParseUint(maxPoints, 10, 64)
 		if perr != nil || i == 0 || i > 255 {
 			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest,
-				fmt.Errorf("max_points must be 1..255, got %q", maxPoints), "can't parse 'max_points' field")
+				fmt.Errorf("max_points must be 1..255, got %q", maxPoints), "max_points must be 1..255")
 			return
 		}
 		aggDuration = toTime.Sub(fromTime).Truncate(time.Second) / time.Duration(i)
