@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -112,8 +113,12 @@ func (s *Server) routes() http.Handler {
 
 		rUI.HandleFunc("GET /", s.dashboardPage)
 		rUI.HandleFunc("GET /fragment/dashboard", s.dashboardFragment)
-		// serve embedded static assets (charts.js, favicon.ico)
-		staticSub, _ := fs.Sub(staticFS, "static")
+		// serve embedded static assets (charts.js, favicon.ico); the subtree is embedded
+		// at build time, so a failure here is a packaging bug worth failing loudly on
+		staticSub, err := fs.Sub(staticFS, "static")
+		if err != nil {
+			panic(fmt.Sprintf("embedded static assets unavailable: %s", err))
+		}
 		rUI.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFileFS(w, r, staticSub, "favicon.ico")
 		})
@@ -158,10 +163,16 @@ func (s *Server) renderDashboard(w http.ResponseWriter, r *http.Request, tmpl st
 		}
 		return
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := s.templates.ExecuteTemplate(w, tmpl, data); err != nil {
+	// render into a buffer first so a template error yields a clean 500 instead of a
+	// 200 with a half-written body
+	var buf bytes.Buffer
+	if err := s.templates.ExecuteTemplate(&buf, tmpl, data); err != nil {
 		log.Printf("[WARN] failed to render dashboard %s, %s", tmpl, err)
+		http.Error(w, "failed to render dashboard", http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = buf.WriteTo(w)
 }
 
 // buildDashboardData assembles DashboardData from candles for the requested period

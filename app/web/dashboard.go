@@ -220,8 +220,9 @@ type echartsHeatmap struct {
 	Data [][]int `json:"data"` // [[hour, weekday, value], ...]
 }
 
-// buildChartData aggregates candles by aggDuration and marshals into ECharts bar chart option JSON.
-// returns empty JSON object on error or empty input.
+// buildChartData aggregates candles by aggDuration and marshals them into an ECharts bar
+// chart option as JSON. empty input still yields a valid option with an empty series;
+// only a marshal failure falls back to "{}".
 func buildChartData(ctx context.Context, candles []store.Candle, aggDuration time.Duration) template.JS {
 	aggregated := aggregateCandles(ctx, candles, aggDuration)
 
