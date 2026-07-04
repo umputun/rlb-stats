@@ -37,11 +37,11 @@ func aggregateCandles(ctx context.Context, candles []store.Candle, aggInterval t
 	buckets := map[time.Time]store.Candle{}
 	order := make([]time.Time, 0, len(ordered))
 
-	// emit returns the aggregated buckets ordered by time, skipping empty ones.
-	// used both on normal completion and on cancellation, so an aborted request
-	// still yields the buckets aggregated so far rather than an empty result.
+	// emit returns the aggregated buckets, skipping empty ones. order is already sorted:
+	// ordered is time-sorted and bucket times (floor division of a non-decreasing
+	// StartMinute) are appended in non-decreasing order. used both on normal completion
+	// and on cancellation, so an aborted request still yields the buckets built so far.
 	emit := func() []store.Candle {
-		sort.Slice(order, func(i, j int) bool { return order[i].Before(order[j]) })
 		for _, t := range order {
 			if len(buckets[t].Nodes) != 0 {
 				result = append(result, buckets[t])
