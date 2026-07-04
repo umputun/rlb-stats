@@ -123,6 +123,21 @@ func TestAggregatorConcurrentStore(t *testing.T) {
 	assert.NotEmpty(t, candle.Nodes)
 }
 
+func TestBuildCandleDedupeKeyNoCollision(t *testing.T) {
+	// (file, ip) pairs that a naive "file-ip" string key would collapse into one:
+	// "a-b" + "c" and "a" + "b-c" both concatenate to "a-b-c". the struct key keeps
+	// them distinct, so both must be counted.
+	candle := buildCandle([]LogRecord{
+		{FromIP: "c", FileName: "a-b", DestHost: "n1", Date: time.Time{}},
+		{FromIP: "b-c", FileName: "a", DestHost: "n1", Date: time.Time{}},
+	})
+
+	assert.Equal(t, 2, candle.Nodes["all"].Volume, "distinct file+ip pairs must be counted separately")
+	assert.Equal(t, 1, candle.Nodes["all"].Files["a-b"])
+	assert.Equal(t, 1, candle.Nodes["all"].Files["a"])
+	assert.Equal(t, 2, candle.Nodes["n1"].Volume)
+}
+
 func TestFlush(t *testing.T) {
 	t.Run("empty aggregator", func(t *testing.T) {
 		parser := &Aggregator{}
