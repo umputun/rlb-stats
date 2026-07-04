@@ -33,6 +33,21 @@ window.addEventListener("resize", function () {
     });
 });
 
+// dispose ECharts instances inside a node about to be replaced by an HTMX swap.
+// hx-swap="innerHTML" removes the old chart containers from the DOM, so without this
+// their instances leak across repeated period switches. only dispose when the swap
+// will actually happen (shouldSwap is false for error responses / cancelled swaps),
+// otherwise a failed period switch would blank the still-visible charts.
+document.addEventListener("htmx:beforeSwap", function (evt) {
+    if (!evt.detail || evt.detail.shouldSwap !== true || !evt.detail.target) return;
+    evt.detail.target.querySelectorAll("[data-echarts]").forEach(function (container) {
+        var instance = echarts.getInstanceByDom(container);
+        if (instance) {
+            instance.dispose();
+        }
+    });
+});
+
 // re-init charts after HTMX swaps new content
 document.addEventListener("htmx:afterSettle", function () {
     initCharts();
