@@ -44,14 +44,27 @@ func (s *Bolt) Close() error {
 // keys are decimal Unix timestamps; lexicographic ordering matches numeric ordering
 // because all timestamps since 1973 are 10 digits (remains true until 2286).
 func (s *Bolt) Save(candle Candle) (err error) {
-	key := fmt.Sprintf("%d", candle.StartMinute.Unix())
+	key := fmt.Appendf(nil, "%d", candle.StartMinute.Unix())
 	err = s.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucket)
+		// merge with any candle already stored for this minute so a second write for the
+		// same StartMinute (flush-on-shutdown then restart, or a minute split across
+		// concurrent inserts) adds to it instead of overwriting and losing earlier stats
+		if existing := b.Get(key); existing != nil {
+			var prev Candle
+			if e := json.Unmarshal(existing, &prev); e != nil {
+				// existing entry is unreadable; overwrite it rather than failing the save
+				// and losing the new candle too
+				log.Printf("[WARN] can't unmarshal stored candle for key %s, overwriting: %s", key, e)
+			} else {
+				candle = mergeCandles(prev, candle)
+			}
+		}
 		jdata, jerr := json.Marshal(candle)
 		if jerr != nil {
 			return jerr
 		}
-		return b.Put([]byte(key), jdata)
+		return b.Put(key, jdata)
 	})
 	if err != nil {
 		return err
