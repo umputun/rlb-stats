@@ -2,6 +2,7 @@ package store
 
 import (
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -92,6 +93,49 @@ func TestParsing(t *testing.T) {
 			assert.EqualValues(t, tt.dumped, ok, "entry (not) dumped")
 		})
 	}
+}
+
+func TestAggregatorConcurrentStore(t *testing.T) {
+	// exercises concurrent Store calls on a shared Aggregator; fails under -race without the mutex
+	parser := &Aggregator{}
+	baseTime := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	var wg sync.WaitGroup
+	for g := 0; g < 8; g++ {
+		wg.Add(1)
+		go func(g int) {
+			defer wg.Done()
+			for i := 0; i < 100; i++ {
+				parser.Store(LogRecord{
+					FromIP:   "127.0.0." + strconv.Itoa(g),
+					FileName: "/rtfiles/rt_podcast" + strconv.Itoa(i) + ".mp3",
+					DestHost: "n6.radio-t.com",
+					Date:     baseTime.Add(time.Duration(i) * time.Minute),
+				})
+			}
+		}(g)
+	}
+	wg.Wait()
+
+	// the last stored entry is still buffered, so draining via Flush must emit a candle
+	candle, ok := parser.Flush()
+	assert.True(t, ok, "buffered entries remain after the stores, so Flush must emit a candle")
+	assert.NotEmpty(t, candle.Nodes)
+}
+
+func TestBuildCandleDedupeKeyNoCollision(t *testing.T) {
+	// (file, ip) pairs that a naive "file-ip" string key would collapse into one:
+	// "a-b" + "c" and "a" + "b-c" both concatenate to "a-b-c". the struct key keeps
+	// them distinct, so both must be counted.
+	candle := buildCandle([]LogRecord{
+		{FromIP: "c", FileName: "a-b", DestHost: "n1", Date: time.Time{}},
+		{FromIP: "b-c", FileName: "a", DestHost: "n1", Date: time.Time{}},
+	})
+
+	assert.Equal(t, 2, candle.Nodes["all"].Volume, "distinct file+ip pairs must be counted separately")
+	assert.Equal(t, 1, candle.Nodes["all"].Files["a-b"])
+	assert.Equal(t, 1, candle.Nodes["all"].Files["a"])
+	assert.Equal(t, 2, candle.Nodes["n1"].Volume)
 }
 
 func TestFlush(t *testing.T) {
