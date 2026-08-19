@@ -297,6 +297,75 @@ func TestServerWebappDirOverride(t *testing.T) {
 	assert.Equal(t, "// from disk\n", string(sbody), "static assets served from the directory")
 }
 
+func TestServerWebappDirConfined(t *testing.T) {
+	storage, engineTeardown := startupEngine(t, false)
+	defer engineTeardown()
+
+	outside := filepath.Join(t.TempDir(), "secret.txt")
+	require.NoError(t, os.WriteFile(outside, []byte("top secret"), 0o600))
+
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "static"), 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "templates"), 0o750))
+	// symlinks pointing out of the override directory must not be followed
+	require.NoError(t, os.Symlink(outside, filepath.Join(dir, "static", "secret.txt")))
+	require.NoError(t, os.Symlink(outside, filepath.Join(dir, "templates", "layout.html")))
+
+	srv := &Server{address: "127.0.0.1", Engine: storage, Aggregator: &store.Aggregator{},
+		Port: 9999, Version: "test_version", WebappDir: dir}
+	ts := httptest.NewServer(srv.routes())
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/static/secret.txt")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode, "file outside the override directory not served")
+	assert.NotContains(t, string(body), "top secret")
+
+	// the escaping layout.html can't be parsed either, the embedded templates render instead
+	presp, err := http.Get(ts.URL + "/")
+	require.NoError(t, err)
+	defer presp.Body.Close()
+	pbody, err := io.ReadAll(presp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, presp.StatusCode)
+	assert.NotContains(t, string(pbody), "top secret")
+	assert.Contains(t, string(pbody), "Download History", "embedded templates used")
+}
+
+func TestServerWebappDirPartialStatic(t *testing.T) {
+	storage, engineTeardown := startupEngine(t, false)
+	defer engineTeardown()
+
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "static"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "static", "favicon.ico"), []byte("disk icon"), 0o600))
+
+	srv := &Server{address: "127.0.0.1", Engine: storage, Aggregator: &store.Aggregator{},
+		Port: 9999, Version: "test_version", WebappDir: dir}
+	ts := httptest.NewServer(srv.routes())
+	defer ts.Close()
+
+	// the file the directory provides comes from disk
+	iresp, err := http.Get(ts.URL + "/favicon.ico")
+	require.NoError(t, err)
+	defer iresp.Body.Close()
+	ibody, err := io.ReadAll(iresp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "disk icon", string(ibody))
+
+	// the one it doesn't still comes from the binary
+	cresp, err := http.Get(ts.URL + "/static/charts.js")
+	require.NoError(t, err)
+	defer cresp.Body.Close()
+	cbody, err := io.ReadAll(cresp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, cresp.StatusCode, "missing file falls back to the embedded copy")
+	assert.Contains(t, string(cbody), "echarts", "embedded charts.js served")
+}
+
 func TestServerWebappDirFallback(t *testing.T) {
 	storage, engineTeardown := startupEngine(t, false)
 	defer engineTeardown()

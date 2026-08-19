@@ -86,17 +86,31 @@ var validPeriods = map[string]time.Duration{
 	periodAll: 0, // special case, uses TimeRange
 }
 
-// uiDir returns the path of a WebappDir subdirectory if it exists, allowing a mounted
-// directory to override the UI compiled into the binary. empty result means use the embedded copy.
-func (s *Server) uiDir(name string) string {
+// uiFS opens a WebappDir subdirectory as a filesystem confined to it, letting a mounted
+// directory override the UI compiled into the binary. os.OpenRoot keeps symlinks inside the
+// directory from reaching the rest of the filesystem, so an override can only expose its own
+// content. nil result means the directory is unusable and the embedded copy should be used.
+func (s *Server) uiFS(name string) fs.FS {
 	if s.WebappDir == "" {
-		return ""
+		return nil
 	}
-	dir := filepath.Join(s.WebappDir, name)
-	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
-		return ""
+	root, err := os.OpenRoot(filepath.Join(s.WebappDir, name))
+	if err != nil {
+		return nil
 	}
-	return dir
+	return root.FS()
+}
+
+// fallbackFS serves what primary has and falls back to secondary for the rest, so a partly
+// populated override directory doesn't hide the assets it has no replacement for
+type fallbackFS struct{ primary, secondary fs.FS }
+
+func (f fallbackFS) Open(name string) (fs.File, error) {
+	file, err := f.primary.Open(name)
+	if err != nil {
+		return f.secondary.Open(name)
+	}
+	return file, nil
 }
 
 func parseTemplatesFS(fsys fs.FS) (*template.Template, error) {
@@ -107,9 +121,12 @@ func parseTemplatesFS(fsys fs.FS) (*template.Template, error) {
 	return template.New("").Funcs(funcMap).ParseFS(fsys, "layout.html", "dashboard.html", "partials/*.html")
 }
 
+// parseTemplates loads the page templates, from WebappDir if it holds a parsable set and from
+// the binary otherwise. templates are taken as a set because they reference each other.
 func (s *Server) parseTemplates() {
-	if dir := s.uiDir("templates"); dir != "" {
-		tmpl, err := parseTemplatesFS(os.DirFS(dir))
+	if fsys := s.uiFS("templates"); fsys != nil {
+		dir := filepath.Join(s.WebappDir, "templates")
+		tmpl, err := parseTemplatesFS(fsys)
 		if err == nil {
 			log.Printf("[INFO] serving templates from %s", dir)
 			s.templates = tmpl
@@ -124,19 +141,20 @@ func (s *Server) parseTemplates() {
 	s.templates = template.Must(parseTemplatesFS(sub))
 }
 
-// staticAssets returns the filesystem with static assets, from WebappDir if present
-// and from the binary otherwise
+// staticAssets returns the filesystem with static assets, preferring files from WebappDir
+// and using the embedded copy for whatever it doesn't provide
 func (s *Server) staticAssets() fs.FS {
-	if dir := s.uiDir("static"); dir != "" {
-		log.Printf("[INFO] serving static assets from %s", dir)
-		return os.DirFS(dir)
-	}
 	// the subtree is embedded at build time, so a failure here is a packaging bug worth failing loudly on
-	sub, err := fs.Sub(staticFS, "static")
+	embedded, err := fs.Sub(staticFS, "static")
 	if err != nil {
 		panic(fmt.Sprintf("embedded static assets unavailable: %s", err))
 	}
-	return sub
+	if fsys := s.uiFS("static"); fsys != nil {
+		log.Printf("[INFO] serving static assets from %s, embedded copies for missing files",
+			filepath.Join(s.WebappDir, "static"))
+		return fallbackFS{primary: fsys, secondary: embedded}
+	}
+	return embedded
 }
 
 func (s *Server) routes() http.Handler {

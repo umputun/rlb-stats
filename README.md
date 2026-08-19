@@ -36,8 +36,9 @@ Period switching is handled via HTMX without full page reloads. Dark mode is sup
 
 The UI is compiled into the binary, so no files are needed on disk. To alter it without rebuilding, put a copy of
 [app/web/templates](app/web/templates) and [app/web/static](app/web/static) into a directory and point `--webapp` at it,
-for example `docker run -v ./my-ui:/srv/webapp ...` — the container's default is `/srv/webapp`. Each subdirectory is
-optional and used only if present, and the embedded copy is used for whatever is missing or fails to parse.
+for example `docker run -v ./my-ui:/srv/webapp ...`, since the container's default is `/srv/webapp`. Each subdirectory is
+optional: static files fall back to the embedded copy one by one, and the templates are taken from the directory only
+if the whole set parses, since they reference each other. Symlinks leading out of the directory are not followed.
 
 ### Application parameters
 
