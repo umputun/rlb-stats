@@ -1,10 +1,13 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -26,12 +29,13 @@ type LogAggregator interface {
 
 // Server is a web-server for rlb-stats REST API and UI
 type Server struct {
-	Engine       store.Engine
-	Aggregator   LogAggregator
-	Port         int
-	Version      string
-	address      string // set only in tests
-	webappPrefix string // set only in tests
+	Engine     store.Engine
+	Aggregator LogAggregator
+	Port       int
+	Version    string
+	WebappDir  string // optional directory with templates/ and static/ overriding the embedded UI
+	address    string // set only in tests
+	templates  *template.Template
 }
 
 // JSON is a map alias, just for convenience
@@ -64,7 +68,98 @@ func (s *Server) Run(ctx context.Context) {
 	}
 }
 
+// badRequestError indicates a client input error (invalid query parameters, etc.)
+type badRequestError struct{ msg string }
+
+func (e *badRequestError) Error() string { return e.msg }
+
+// periodAll is the period selector that spans the whole store via TimeRange
+const periodAll = "all"
+
+// validPeriods maps period parameter values to their durations
+var validPeriods = map[string]time.Duration{
+	"1h":      time.Hour,
+	"12h":     12 * time.Hour,
+	"24h":     24 * time.Hour,
+	"10d":     10 * 24 * time.Hour,
+	"30d":     30 * 24 * time.Hour,
+	periodAll: 0, // special case, uses TimeRange
+}
+
+// uiFS opens a WebappDir subdirectory as a filesystem confined to it, letting a mounted
+// directory override the UI compiled into the binary. os.OpenRoot keeps symlinks inside the
+// directory from reaching the rest of the filesystem, so an override can only expose its own
+// content. nil result means the directory is unusable and the embedded copy should be used.
+func (s *Server) uiFS(name string) fs.FS {
+	if s.WebappDir == "" {
+		return nil
+	}
+	root, err := os.OpenRoot(filepath.Join(s.WebappDir, name))
+	if err != nil {
+		return nil
+	}
+	return root.FS()
+}
+
+// fallbackFS serves what primary has and falls back to secondary for the rest, so a partly
+// populated override directory doesn't hide the assets it has no replacement for
+type fallbackFS struct{ primary, secondary fs.FS }
+
+func (f fallbackFS) Open(name string) (fs.File, error) {
+	file, err := f.primary.Open(name)
+	if err != nil {
+		return f.secondary.Open(name)
+	}
+	return file, nil
+}
+
+func parseTemplatesFS(fsys fs.FS) (*template.Template, error) {
+	funcMap := template.FuncMap{
+		"list": func(args ...string) []string { return args },
+		"inc":  func(i int) int { return i + 1 },
+	}
+	return template.New("").Funcs(funcMap).ParseFS(fsys, "layout.html", "dashboard.html", "partials/*.html")
+}
+
+// parseTemplates loads the page templates, from WebappDir if it holds a parsable set and from
+// the binary otherwise. templates are taken as a set because they reference each other.
+func (s *Server) parseTemplates() {
+	if fsys := s.uiFS("templates"); fsys != nil {
+		dir := filepath.Join(s.WebappDir, "templates")
+		tmpl, err := parseTemplatesFS(fsys)
+		if err == nil {
+			log.Printf("[INFO] serving templates from %s", dir)
+			s.templates = tmpl
+			return
+		}
+		log.Printf("[WARN] can't parse templates from %s, using embedded, %s", dir, err)
+	}
+	sub, err := fs.Sub(templateFS, "templates")
+	if err != nil {
+		panic(fmt.Sprintf("embedded templates unavailable: %s", err))
+	}
+	s.templates = template.Must(parseTemplatesFS(sub))
+}
+
+// staticAssets returns the filesystem with static assets, preferring files from WebappDir
+// and using the embedded copy for whatever it doesn't provide
+func (s *Server) staticAssets() fs.FS {
+	// the subtree is embedded at build time, so a failure here is a packaging bug worth failing loudly on
+	embedded, err := fs.Sub(staticFS, "static")
+	if err != nil {
+		panic(fmt.Sprintf("embedded static assets unavailable: %s", err))
+	}
+	if fsys := s.uiFS("static"); fsys != nil {
+		log.Printf("[INFO] serving static assets from %s, embedded copies for missing files",
+			filepath.Join(s.WebappDir, "static"))
+		return fallbackFS{primary: fsys, secondary: embedded}
+	}
+	return embedded
+}
+
 func (s *Server) routes() http.Handler {
+	s.parseTemplates()
+
 	r := routegroup.New(http.NewServeMux())
 
 	// Common middleware
@@ -78,9 +173,13 @@ func (s *Server) routes() http.Handler {
 		rUI.Use(infoLogger.Handler)
 		rUI.Use(rest.Throttle(10))
 
-		workDir, _ := os.Getwd()
-		filesDir := filepath.Join(workDir, s.webappPrefix+"webapp")
-		rUI.HandleFiles("/", http.Dir(filesDir))
+		rUI.HandleFunc("GET /", s.dashboardPage)
+		rUI.HandleFunc("GET /fragment/dashboard", s.dashboardFragment)
+		staticSub := s.staticAssets()
+		rUI.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFileFS(w, r, staticSub, "favicon.ico")
+		})
+		rUI.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(staticSub)))
 	})
 
 	// API routes group
@@ -95,6 +194,116 @@ func (s *Server) routes() http.Handler {
 	})
 
 	return r
+}
+
+// dashboardPage renders the full dashboard HTML page (GET /)
+func (s *Server) dashboardPage(w http.ResponseWriter, r *http.Request) {
+	s.renderDashboard(w, r, "layout.html")
+}
+
+// dashboardFragment renders only the dashboard content for HTMX swap (GET /fragment/dashboard)
+func (s *Server) dashboardFragment(w http.ResponseWriter, r *http.Request) {
+	s.renderDashboard(w, r, "dashboard")
+}
+
+// renderDashboard builds dashboard data and renders it with the given template,
+// mapping bad-request errors to 400 and everything else to 500
+func (s *Server) renderDashboard(w http.ResponseWriter, r *http.Request, tmpl string) {
+	data, err := s.buildDashboardData(r)
+	if err != nil {
+		var bre *badRequestError
+		if errors.As(err, &bre) {
+			http.Error(w, bre.msg, http.StatusBadRequest)
+		} else {
+			log.Printf("[WARN] dashboard error, %s", err)
+			http.Error(w, "failed to load dashboard data", http.StatusInternalServerError)
+		}
+		return
+	}
+	// render into a buffer first so a template error yields a clean 500 instead of a
+	// 200 with a half-written body
+	var buf bytes.Buffer
+	if err := s.templates.ExecuteTemplate(&buf, tmpl, data); err != nil {
+		log.Printf("[WARN] failed to render dashboard %s, %s", tmpl, err)
+		http.Error(w, "failed to render dashboard", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = buf.WriteTo(w)
+}
+
+// buildDashboardData assembles DashboardData from candles for the requested period
+func (s *Server) buildDashboardData(r *http.Request) (*DashboardData, error) {
+	period := r.URL.Query().Get("period")
+	if period == "" {
+		period = "24h"
+	}
+	dur, ok := validPeriods[period]
+	if !ok {
+		return nil, &badRequestError{msg: fmt.Sprintf("invalid period %q", period)}
+	}
+
+	ctx := r.Context()
+	now := time.Now()
+
+	// oldest timestamp in the store, used for the all-time summary and the "all" chart period
+	oldest, _, err := s.Engine.TimeRange(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("can't get time range: %w", err)
+	}
+	if oldest.IsZero() {
+		oldest = now
+	}
+
+	// load the full history once; the chart window and every summary are derived from it in memory
+	allCandles, err := s.Engine.Load(ctx, oldest, now)
+	if err != nil {
+		return nil, fmt.Errorf("can't load candles: %w", err)
+	}
+
+	// chart time range: whole history for "all", otherwise a trailing window.
+	// allCandles is sorted ascending by StartMinute, so trailing windows are subslices, not copies
+	chartFrom := now.Add(-dur)
+	if period == periodAll {
+		chartFrom = oldest
+	}
+	chartCandles := allCandles[firstIndexSince(allCandles, chartFrom):]
+
+	// summary cards for fixed trailing windows plus all-time, all derived from allCandles
+	specs := []struct {
+		label string
+		dur   time.Duration
+		isAll bool
+	}{
+		{label: "1 hour", dur: time.Hour},
+		{label: "24 hours", dur: 24 * time.Hour},
+		{label: "1 week", dur: 7 * 24 * time.Hour},
+		{label: "1 month", dur: 30 * 24 * time.Hour},
+		{label: "All time", isAll: true},
+	}
+
+	summaries := make([]SummaryData, 0, len(specs))
+	for _, sp := range specs {
+		candles := allCandles
+		if !sp.isAll {
+			candles = allCandles[firstIndexSince(allCandles, now.Add(-sp.dur)):]
+		}
+		summaries = append(summaries, SummaryData{Label: sp.label, Count: computeSummary(candles)})
+	}
+
+	// compute aggregation duration for chart (~100 points)
+	chartRange := now.Sub(chartFrom)
+	aggDuration := max(chartRange.Truncate(time.Second)/100, time.Minute)
+
+	data := &DashboardData{
+		Summaries:   summaries,
+		ChartJSON:   buildChartData(ctx, chartCandles, aggDuration),
+		Files:       computeTopFiles(chartCandles, 20),
+		Nodes:       computeNodeStats(chartCandles),
+		HeatmapJSON: buildHeatmapData(computeHeatmap(chartCandles)),
+		Period:      period,
+	}
+	return data, nil
 }
 
 // GET /api/candle?from=2022-04-06T05:06:17.041Z&to=2022-04-06T06:06:17.041Z&max_points=100&files=10
@@ -127,9 +336,14 @@ func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if n := r.URL.Query().Get("max_points"); n != "" {
-		i, err := strconv.ParseInt(n, 10, 8)
+		i, err := strconv.ParseInt(n, 10, 64)
 		if err != nil {
 			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, err, "can't parse 'max_points' field")
+			return
+		}
+		if i <= 0 {
+			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest,
+				errors.New("max_points must be positive"), "invalid 'max_points' field")
 			return
 		}
 		aggDuration = toTime.Sub(fromTime).Truncate(time.Second) / time.Duration(i)

@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -18,34 +20,104 @@ import (
 	"github.com/umputun/rlb-stats/app/store"
 )
 
-func TestServerUI(t *testing.T) {
+func TestServerDashboard(t *testing.T) {
 	goodServer, goodTeardown := startupT(t, false)
 	defer goodTeardown()
 
-	var testData = []struct {
-		ts           *httptest.Server
-		url          string
-		responseCode int
-	}{
-		{ts: goodServer, url: "/", responseCode: http.StatusOK},
-		{ts: goodServer, url: "/index.js", responseCode: http.StatusOK},
-		{ts: goodServer, url: "/favicon.ico", responseCode: http.StatusOK},
-		{ts: goodServer, url: "/data.js", responseCode: http.StatusOK},
-		{ts: goodServer, url: "/index.html", responseCode: http.StatusOK},
-	}
 	client := http.Client{}
-	for i, x := range testData {
-		t.Run(fmt.Sprint(i), func(t *testing.T) {
-			req, err := http.NewRequest(http.MethodGet, x.ts.URL+x.url, nil)
-			require.NoError(t, err, i)
-			b, err := client.Do(req)
-			require.NoError(t, err, i)
-			body, err := io.ReadAll(b.Body)
-			require.NoError(t, b.Body.Close())
-			require.NoError(t, err, i)
-			assert.Equal(t, x.responseCode, b.StatusCode, string(body))
-		})
-	}
+
+	t.Run("GET / returns full HTML page", func(t *testing.T) {
+		resp, err := client.Get(goodServer.URL + "/")
+		require.NoError(t, err)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, resp.Body.Close())
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Contains(t, resp.Header.Get("Content-Type"), "text/html")
+		assert.Contains(t, string(body), "<!DOCTYPE html>")
+		assert.Contains(t, string(body), "<title>RLB Stats</title>")
+		assert.Contains(t, string(body), "id=\"dashboard\"")
+		assert.Contains(t, string(body), "Downloads")
+	})
+
+	t.Run("GET /fragment/dashboard returns HTML fragment", func(t *testing.T) {
+		resp, err := client.Get(goodServer.URL + "/fragment/dashboard?period=1h")
+		require.NoError(t, err)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, resp.Body.Close())
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Contains(t, resp.Header.Get("Content-Type"), "text/html")
+		assert.NotContains(t, string(body), "<!DOCTYPE html>")
+		assert.NotContains(t, string(body), "<html")
+		assert.Contains(t, string(body), "Downloads")
+	})
+
+	t.Run("GET /fragment/dashboard?period=all works with TimeRange", func(t *testing.T) {
+		resp, err := client.Get(goodServer.URL + "/fragment/dashboard?period=all")
+		require.NoError(t, err)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, resp.Body.Close())
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Contains(t, string(body), "Downloads")
+	})
+
+	t.Run("GET /fragment/dashboard with invalid period returns 400", func(t *testing.T) {
+		resp, err := client.Get(goodServer.URL + "/fragment/dashboard?period=99h")
+		require.NoError(t, err)
+		_ = resp.Body.Close()
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("GET / with default period renders 24h", func(t *testing.T) {
+		resp, err := client.Get(goodServer.URL + "/")
+		require.NoError(t, err)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, resp.Body.Close())
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		// the 24h button should have aria-current="true"
+		assert.Contains(t, string(body), "aria-current")
+	})
+
+	t.Run("GET /static/charts.js returns JS file", func(t *testing.T) {
+		resp, err := client.Get(goodServer.URL + "/static/charts.js")
+		require.NoError(t, err)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, resp.Body.Close())
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Contains(t, string(body), "initCharts")
+		assert.Contains(t, string(body), "htmx:afterSettle")
+	})
+}
+
+func TestServerDashboardBadEngine(t *testing.T) {
+	badServer, badTeardown := startupT(t, true)
+	defer badTeardown()
+
+	client := http.Client{}
+
+	t.Run("GET / with bad engine returns 500", func(t *testing.T) {
+		resp, err := client.Get(badServer.URL + "/")
+		require.NoError(t, err)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, resp.Body.Close())
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Contains(t, string(body), "failed to load dashboard data")
+	})
+
+	t.Run("GET /fragment/dashboard with bad engine returns 500", func(t *testing.T) {
+		resp, err := client.Get(badServer.URL + "/fragment/dashboard?period=all")
+		require.NoError(t, err)
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, resp.Body.Close())
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+		assert.Contains(t, string(body), "failed to load dashboard data")
+	})
 }
 
 func TestServerAPI(t *testing.T) {
@@ -73,8 +145,14 @@ func TestServerAPI(t *testing.T) {
 			result: "{\"error\":\"can't parse 'to' field\"}\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&aggregate=bad", startTime), responseCode: http.StatusBadRequest,
 			result: "{\"error\":\"can't parse 'aggregate' field\"}\n"},
-		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=256", startTime), responseCode: http.StatusBadRequest,
-			result: "{\"error\":\"can't parse 'max_points' field\"}\n"},
+		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=0", startTime), responseCode: http.StatusBadRequest,
+			result: "{\"error\":\"invalid 'max_points' field\"}\n"},
+		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=-1", startTime), responseCode: http.StatusBadRequest,
+			result: "{\"error\":\"invalid 'max_points' field\"}\n"},
+		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=256", startTime), responseCode: http.StatusOK,
+			candles: []store.Candle{storedCandle}},
+		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=200", startTime), responseCode: http.StatusOK,
+			candles: []store.Candle{storedCandle}},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v", startTime, startTime), responseCode: http.StatusOK,
 			result: "[]\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v", startTime), responseCode: http.StatusOK,
@@ -167,16 +245,172 @@ func TestServerRunShutdown(t *testing.T) {
 	}
 }
 
+func TestServerWebappDirOverride(t *testing.T) {
+	storage, engineTeardown := startupEngine(t, false)
+	defer engineTeardown()
+
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "templates", "partials"), 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "static"), 0o750))
+
+	// minimal set of templates, enough to render the dashboard from disk
+	embedded := []string{"layout.html", "dashboard.html"}
+	for _, name := range embedded {
+		data, err := templateFS.ReadFile("templates/" + name)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "templates", name), data, 0o600))
+	}
+	partials, err := templateFS.ReadDir("templates/partials")
+	require.NoError(t, err)
+	for _, p := range partials {
+		data, e := templateFS.ReadFile("templates/partials/" + p.Name())
+		require.NoError(t, e)
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "templates", "partials", p.Name()), data, 0o600))
+	}
+	// mark the on-disk copy so the response tells the two apart
+	layout := filepath.Join(dir, "templates", "layout.html")
+	data, err := os.ReadFile(layout) //nolint:gosec // path built from t.TempDir
+	require.NoError(t, err)
+	marked := bytes.Replace(data, []byte("<h1>RLB Stats</h1>"), []byte("<h1>RLB Stats from disk</h1>"), 1)
+	require.NotEqual(t, data, marked, "marker anchor present in the embedded layout")
+	require.NoError(t, os.WriteFile(layout, marked, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "static", "charts.js"), []byte("// from disk\n"), 0o600))
+
+	srv := &Server{address: "127.0.0.1", Engine: storage, Aggregator: &store.Aggregator{},
+		Port: 9999, Version: "test_version", WebappDir: dir}
+	ts := httptest.NewServer(srv.routes())
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Contains(t, string(body), "from disk", "templates served from the directory, not the binary")
+
+	sresp, err := http.Get(ts.URL + "/static/charts.js")
+	require.NoError(t, err)
+	defer sresp.Body.Close()
+	sbody, err := io.ReadAll(sresp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "// from disk\n", string(sbody), "static assets served from the directory")
+}
+
+func TestServerWebappDirConfined(t *testing.T) {
+	storage, engineTeardown := startupEngine(t, false)
+	defer engineTeardown()
+
+	outside := filepath.Join(t.TempDir(), "secret.txt")
+	require.NoError(t, os.WriteFile(outside, []byte("top secret"), 0o600))
+
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "static"), 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "templates"), 0o750))
+	// symlinks pointing out of the override directory must not be followed
+	require.NoError(t, os.Symlink(outside, filepath.Join(dir, "static", "secret.txt")))
+	require.NoError(t, os.Symlink(outside, filepath.Join(dir, "templates", "layout.html")))
+
+	srv := &Server{address: "127.0.0.1", Engine: storage, Aggregator: &store.Aggregator{},
+		Port: 9999, Version: "test_version", WebappDir: dir}
+	ts := httptest.NewServer(srv.routes())
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/static/secret.txt")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode, "file outside the override directory not served")
+	assert.NotContains(t, string(body), "top secret")
+
+	// the escaping layout.html can't be parsed either, the embedded templates render instead
+	presp, err := http.Get(ts.URL + "/")
+	require.NoError(t, err)
+	defer presp.Body.Close()
+	pbody, err := io.ReadAll(presp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, presp.StatusCode)
+	assert.NotContains(t, string(pbody), "top secret")
+	assert.Contains(t, string(pbody), "Download History", "embedded templates used")
+}
+
+func TestServerWebappDirPartialStatic(t *testing.T) {
+	storage, engineTeardown := startupEngine(t, false)
+	defer engineTeardown()
+
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "static"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "static", "favicon.ico"), []byte("disk icon"), 0o600))
+
+	srv := &Server{address: "127.0.0.1", Engine: storage, Aggregator: &store.Aggregator{},
+		Port: 9999, Version: "test_version", WebappDir: dir}
+	ts := httptest.NewServer(srv.routes())
+	defer ts.Close()
+
+	// the file the directory provides comes from disk
+	iresp, err := http.Get(ts.URL + "/favicon.ico")
+	require.NoError(t, err)
+	defer iresp.Body.Close()
+	ibody, err := io.ReadAll(iresp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "disk icon", string(ibody))
+
+	// the one it doesn't still comes from the binary
+	cresp, err := http.Get(ts.URL + "/static/charts.js")
+	require.NoError(t, err)
+	defer cresp.Body.Close()
+	cbody, err := io.ReadAll(cresp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, cresp.StatusCode, "missing file falls back to the embedded copy")
+	assert.Contains(t, string(cbody), "echarts", "embedded charts.js served")
+}
+
+func TestServerWebappDirFallback(t *testing.T) {
+	storage, engineTeardown := startupEngine(t, false)
+	defer engineTeardown()
+
+	t.Run("missing directory falls back to embedded", func(t *testing.T) {
+		srv := &Server{address: "127.0.0.1", Engine: storage, Aggregator: &store.Aggregator{},
+			Port: 9999, Version: "test_version", WebappDir: filepath.Join(t.TempDir(), "absent")}
+		ts := httptest.NewServer(srv.routes())
+		defer ts.Close()
+
+		resp, err := http.Get(ts.URL + "/")
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("unparsable templates fall back to embedded", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "templates"), 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "templates", "layout.html"), []byte("{{define"), 0o600))
+
+		srv := &Server{address: "127.0.0.1", Engine: storage, Aggregator: &store.Aggregator{},
+			Port: 9999, Version: "test_version", WebappDir: dir}
+		ts := httptest.NewServer(srv.routes())
+		defer ts.Close()
+
+		resp, err := http.Get(ts.URL + "/")
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Contains(t, string(body), "Download History", "embedded templates used when the directory is broken")
+	})
+}
+
 func startupT(t *testing.T, badEngine bool) (ts *httptest.Server, teardown func()) {
 	storage, engineTeardown := startupEngine(t, badEngine)
 
 	srv := &Server{
-		address:      "127.0.0.1",
-		Engine:       storage,
-		Aggregator:   &store.Aggregator{},
-		Port:         9999,
-		Version:      "test_version",
-		webappPrefix: "../../",
+		address:    "127.0.0.1",
+		Engine:     storage,
+		Aggregator: &store.Aggregator{},
+		Port:       9999,
+		Version:    "test_version",
 	}
 
 	ts = httptest.NewServer(srv.routes())

@@ -1,0 +1,29 @@
+{{define "files"}}
+<section>
+    <h2>Top Files</h2>
+    {{if .Files}}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>File</th>
+                <th>Downloads</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range $i, $f := .Files}}
+            <tr>
+                <td>{{inc $i}}</td>
+                <td>{{$f.Name}}</td>
+                <td>{{$f.Count}}</td>
+                <td><div class="bar-fill" style="width:{{$f.Percent}}%"></div></td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <p>No file data available.</p>
+    {{end}}
+</section>
+{{end}}

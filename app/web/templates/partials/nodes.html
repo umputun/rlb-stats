@@ -1,0 +1,27 @@
+{{define "nodes"}}
+<section>
+    <h2>Nodes</h2>
+    {{if .Nodes}}
+    <table>
+        <thead>
+            <tr>
+                <th>Node</th>
+                <th>Volume</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Nodes}}
+            <tr>
+                <td>{{.Name}}</td>
+                <td>{{.Volume}}</td>
+                <td><div class="bar-fill" style="width:{{.Percent}}%"></div></td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <p>No node data available.</p>
+    {{end}}
+</section>
+{{end}}

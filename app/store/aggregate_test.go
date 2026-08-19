@@ -101,11 +101,11 @@ func TestAggregatorConcurrentStore(t *testing.T) {
 	baseTime := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
 
 	var wg sync.WaitGroup
-	for g := 0; g < 8; g++ {
+	for g := range 8 {
 		wg.Add(1)
 		go func(g int) {
 			defer wg.Done()
-			for i := 0; i < 100; i++ {
+			for i := range 100 {
 				parser.Store(LogRecord{
 					FromIP:   "127.0.0." + strconv.Itoa(g),
 					FileName: "/rtfiles/rt_podcast" + strconv.Itoa(i) + ".mp3",

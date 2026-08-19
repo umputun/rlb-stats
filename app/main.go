@@ -14,9 +14,10 @@ import (
 )
 
 type opts struct {
-	BoltDB string `long:"bolt" env:"BOLT_FILE" default:"/tmp/rlb-stats.bd" description:"boltdb file path"`
-	Port   int    `long:"port" env:"PORT" default:"8080" description:"Web server port"`
-	Dbg    bool   `long:"dbg" env:"DEBUG" description:"debug mode"`
+	BoltDB    string `long:"bolt" env:"BOLT_FILE" default:"/tmp/rlb-stats.bd" description:"boltdb file path"`
+	Port      int    `long:"port" env:"PORT" default:"8080" description:"Web server port"`
+	WebappDir string `long:"webapp" env:"WEBAPP" default:"webapp" description:"directory overriding the embedded UI, used if present"`
+	Dbg       bool   `long:"dbg" env:"DEBUG" description:"debug mode"`
 }
 
 var revision string
@@ -48,6 +49,7 @@ func main() {
 		Aggregator: aggregator,
 		Port:       opts.Port,
 		Version:    revision,
+		WebappDir:  opts.WebappDir,
 	}
 	webServer.Run(ctx)
 
