@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -241,6 +243,94 @@ func TestServerRunShutdown(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("server did not shut down within 3 seconds")
 	}
+}
+
+func TestServerWebappDirOverride(t *testing.T) {
+	storage, engineTeardown := startupEngine(t, false)
+	defer engineTeardown()
+
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "templates", "partials"), 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "static"), 0o750))
+
+	// minimal set of templates, enough to render the dashboard from disk
+	embedded := []string{"layout.html", "dashboard.html"}
+	for _, name := range embedded {
+		data, err := templateFS.ReadFile("templates/" + name)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "templates", name), data, 0o600))
+	}
+	partials, err := templateFS.ReadDir("templates/partials")
+	require.NoError(t, err)
+	for _, p := range partials {
+		data, e := templateFS.ReadFile("templates/partials/" + p.Name())
+		require.NoError(t, e)
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "templates", "partials", p.Name()), data, 0o600))
+	}
+	// mark the on-disk copy so the response tells the two apart
+	layout := filepath.Join(dir, "templates", "layout.html")
+	data, err := os.ReadFile(layout) //nolint:gosec // path built from t.TempDir
+	require.NoError(t, err)
+	marked := bytes.Replace(data, []byte("<h1>RLB Stats</h1>"), []byte("<h1>RLB Stats from disk</h1>"), 1)
+	require.NotEqual(t, data, marked, "marker anchor present in the embedded layout")
+	require.NoError(t, os.WriteFile(layout, marked, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "static", "charts.js"), []byte("// from disk\n"), 0o600))
+
+	srv := &Server{address: "127.0.0.1", Engine: storage, Aggregator: &store.Aggregator{},
+		Port: 9999, Version: "test_version", WebappDir: dir}
+	ts := httptest.NewServer(srv.routes())
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Contains(t, string(body), "from disk", "templates served from the directory, not the binary")
+
+	sresp, err := http.Get(ts.URL + "/static/charts.js")
+	require.NoError(t, err)
+	defer sresp.Body.Close()
+	sbody, err := io.ReadAll(sresp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "// from disk\n", string(sbody), "static assets served from the directory")
+}
+
+func TestServerWebappDirFallback(t *testing.T) {
+	storage, engineTeardown := startupEngine(t, false)
+	defer engineTeardown()
+
+	t.Run("missing directory falls back to embedded", func(t *testing.T) {
+		srv := &Server{address: "127.0.0.1", Engine: storage, Aggregator: &store.Aggregator{},
+			Port: 9999, Version: "test_version", WebappDir: filepath.Join(t.TempDir(), "absent")}
+		ts := httptest.NewServer(srv.routes())
+		defer ts.Close()
+
+		resp, err := http.Get(ts.URL + "/")
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("unparsable templates fall back to embedded", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "templates"), 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "templates", "layout.html"), []byte("{{define"), 0o600))
+
+		srv := &Server{address: "127.0.0.1", Engine: storage, Aggregator: &store.Aggregator{},
+			Port: 9999, Version: "test_version", WebappDir: dir}
+		ts := httptest.NewServer(srv.routes())
+		defer ts.Close()
+
+		resp, err := http.Get(ts.URL + "/")
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Contains(t, string(body), "Download History", "embedded templates used when the directory is broken")
+	})
 }
 
 func startupT(t *testing.T, badEngine bool) (ts *httptest.Server, teardown func()) {

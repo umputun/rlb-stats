@@ -34,12 +34,18 @@ Open http://127.0.0.1:8080/ to see the dashboard. The dashboard is server-side r
 
 Period switching is handled via HTMX without full page reloads. Dark mode is supported automatically via Picocss.
 
+The UI is compiled into the binary, so no files are needed on disk. To alter it without rebuilding, put a copy of
+[app/web/templates](app/web/templates) and [app/web/static](app/web/static) into a directory and point `--webapp` at it,
+for example `docker run -v ./my-ui:/srv/webapp ...` — the container's default is `/srv/webapp`. Each subdirectory is
+optional and used only if present, and the embedded copy is used for whatever is missing or fails to parse.
+
 ### Application parameters
 
 | Command line   | Environment    | Default                       | Description                     |
 | ---------------| ---------------| ------------------------------| ------------------------------- |
 | port           | PORT           | `8080`                        | Web server port                 |
 | bolt           | BOLT_FILE      | `/tmp/rlb-stats.bd`           | boltdb file path                |
+| webapp         | WEBAPP         | `webapp`                      | directory overriding the embedded UI, used if present |
 | dbg            | DEBUG          | `false`                       | debug mode                      |
 |                | TIME_ZONE      | `America/Chicago`             | container timezone              |
 

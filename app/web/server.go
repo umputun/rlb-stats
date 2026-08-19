@@ -9,6 +9,8 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -31,6 +33,7 @@ type Server struct {
 	Aggregator LogAggregator
 	Port       int
 	Version    string
+	WebappDir  string // optional directory with templates/ and static/ overriding the embedded UI
 	address    string // set only in tests
 	templates  *template.Template
 }
@@ -83,16 +86,57 @@ var validPeriods = map[string]time.Duration{
 	periodAll: 0, // special case, uses TimeRange
 }
 
-func (s *Server) parseTemplates() {
+// uiDir returns the path of a WebappDir subdirectory if it exists, allowing a mounted
+// directory to override the UI compiled into the binary. empty result means use the embedded copy.
+func (s *Server) uiDir(name string) string {
+	if s.WebappDir == "" {
+		return ""
+	}
+	dir := filepath.Join(s.WebappDir, name)
+	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+		return ""
+	}
+	return dir
+}
+
+func parseTemplatesFS(fsys fs.FS) (*template.Template, error) {
 	funcMap := template.FuncMap{
 		"list": func(args ...string) []string { return args },
 		"inc":  func(i int) int { return i + 1 },
 	}
-	s.templates = template.Must(template.New("").Funcs(funcMap).ParseFS(templateFS,
-		"templates/layout.html",
-		"templates/dashboard.html",
-		"templates/partials/*.html",
-	))
+	return template.New("").Funcs(funcMap).ParseFS(fsys, "layout.html", "dashboard.html", "partials/*.html")
+}
+
+func (s *Server) parseTemplates() {
+	if dir := s.uiDir("templates"); dir != "" {
+		tmpl, err := parseTemplatesFS(os.DirFS(dir))
+		if err == nil {
+			log.Printf("[INFO] serving templates from %s", dir)
+			s.templates = tmpl
+			return
+		}
+		log.Printf("[WARN] can't parse templates from %s, using embedded, %s", dir, err)
+	}
+	sub, err := fs.Sub(templateFS, "templates")
+	if err != nil {
+		panic(fmt.Sprintf("embedded templates unavailable: %s", err))
+	}
+	s.templates = template.Must(parseTemplatesFS(sub))
+}
+
+// staticAssets returns the filesystem with static assets, from WebappDir if present
+// and from the binary otherwise
+func (s *Server) staticAssets() fs.FS {
+	if dir := s.uiDir("static"); dir != "" {
+		log.Printf("[INFO] serving static assets from %s", dir)
+		return os.DirFS(dir)
+	}
+	// the subtree is embedded at build time, so a failure here is a packaging bug worth failing loudly on
+	sub, err := fs.Sub(staticFS, "static")
+	if err != nil {
+		panic(fmt.Sprintf("embedded static assets unavailable: %s", err))
+	}
+	return sub
 }
 
 func (s *Server) routes() http.Handler {
@@ -113,12 +157,7 @@ func (s *Server) routes() http.Handler {
 
 		rUI.HandleFunc("GET /", s.dashboardPage)
 		rUI.HandleFunc("GET /fragment/dashboard", s.dashboardFragment)
-		// serve embedded static assets (charts.js, favicon.ico); the subtree is embedded
-		// at build time, so a failure here is a packaging bug worth failing loudly on
-		staticSub, err := fs.Sub(staticFS, "static")
-		if err != nil {
-			panic(fmt.Sprintf("embedded static assets unavailable: %s", err))
-		}
+		staticSub := s.staticAssets()
 		rUI.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFileFS(w, r, staticSub, "favicon.ico")
 		})
