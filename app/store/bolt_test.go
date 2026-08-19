@@ -111,6 +111,32 @@ func TestBolt_SaveOverwritesCorruptEntry(t *testing.T) {
 	assert.Equal(t, 5, loaded[0].Nodes["all"].Volume, "corrupt entry overwritten with the new candle")
 }
 
+func TestBolt_LoadSkipsCorruptEntry(t *testing.T) {
+	file, err := os.CreateTemp("/tmp/", "bolt_test.bd.")
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
+	defer os.Remove(file.Name())
+
+	s, err := NewBolt(file.Name())
+	require.NoError(t, err)
+	defer s.Close()
+
+	good := Candle{StartMinute: time.Unix(60, 0), Nodes: map[string]Info{
+		AllNode: {Volume: 7, Files: map[string]int{"a.mp3": 7}},
+	}}
+	require.NoError(t, s.Save(good))
+
+	// plant a corrupt value at a neighbouring minute inside the same range
+	require.NoError(t, s.db.Update(func(tx *bolt.Tx) error {
+		return tx.Bucket(bucket).Put(fmt.Appendf(nil, "%d", int64(120)), []byte("not json"))
+	}))
+
+	loaded, err := s.Load(context.Background(), time.Unix(0, 0), time.Unix(600, 0))
+	require.NoError(t, err, "unreadable entry must not fail the whole range read")
+	require.Len(t, loaded, 1, "corrupt candle skipped, readable one returned")
+	assert.Equal(t, 7, loaded[0].Nodes[AllNode].Volume)
+}
+
 func TestBolt_TimeRange(t *testing.T) {
 	t.Run("non-empty DB returns correct oldest and newest", func(t *testing.T) {
 		file, err := os.CreateTemp("/tmp/", "bolt_test.bd.")

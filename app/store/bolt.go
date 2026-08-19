@@ -126,9 +126,11 @@ func (s *Bolt) Load(ctx context.Context, periodStart, periodEnd time.Time) (resu
 			default:
 			}
 			newCandle := Candle{}
-			err = json.Unmarshal(v, &newCandle)
-			if err != nil {
-				return err
+			if e := json.Unmarshal(v, &newCandle); e != nil {
+				// a single unreadable entry shouldn't fail the whole range read, the dashboard
+				// scans the full history and would go blank because of one damaged candle
+				log.Printf("[WARN] can't unmarshal stored candle for key %s, skipping: %s", k, e)
+				continue
 			}
 			result = append(result, newCandle)
 		}
