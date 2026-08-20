@@ -327,18 +327,20 @@ func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 		}
 		toTime = t
 	}
+	// determine the aggregation interval: an explicit aggregate overrides max_points
+	// (per the API docs), so when aggregate is present max_points is ignored entirely
 	aggDuration := toTime.Sub(fromTime).Truncate(time.Second) / 100
-	if a := r.URL.Query().Get("aggregate"); a != "" {
-		aggDuration, err = time.ParseDuration(a)
+	switch aggParam, maxPoints := r.URL.Query().Get("aggregate"), r.URL.Query().Get("max_points"); {
+	case aggParam != "":
+		aggDuration, err = time.ParseDuration(aggParam)
 		if err != nil {
 			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, err, "can't parse 'aggregate' field")
 			return
 		}
-	}
-	if n := r.URL.Query().Get("max_points"); n != "" {
-		i, err := strconv.ParseInt(n, 10, 64)
-		if err != nil {
-			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, err, "can't parse 'max_points' field")
+	case maxPoints != "":
+		i, perr := strconv.ParseInt(maxPoints, 10, 64)
+		if perr != nil {
+			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, perr, "can't parse 'max_points' field")
 			return
 		}
 		if i <= 0 {

@@ -151,6 +151,9 @@ func TestServerAPI(t *testing.T) {
 			result: "{\"error\":\"invalid 'max_points' field\"}\n"},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=256", startTime), responseCode: http.StatusOK,
 			candles: []store.Candle{storedCandle}},
+		// aggregate wins over max_points, so an otherwise-rejected max_points is never parsed
+		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&aggregate=5m&max_points=0", startTime), responseCode: http.StatusOK,
+			candles: []store.Candle{storedCandle}},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&max_points=200", startTime), responseCode: http.StatusOK,
 			candles: []store.Candle{storedCandle}},
 		{ts: goodServer, url: fmt.Sprintf("/api/candle?from=%v&to=%v", startTime, startTime), responseCode: http.StatusOK,
