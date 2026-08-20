@@ -337,6 +337,13 @@ func (s *Server) getCandle(w http.ResponseWriter, r *http.Request) {
 			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest, err, "can't parse 'aggregate' field")
 			return
 		}
+		// aggregateCandles floors anything below a minute, so a non-positive value would answer 200
+		// with an interval the caller never asked for
+		if aggDuration <= 0 {
+			rest.SendErrorJSON(w, r, log.Default(), http.StatusBadRequest,
+				errors.New("aggregate must be positive"), "invalid 'aggregate' field")
+			return
+		}
 	case maxPoints != "":
 		i, perr := strconv.ParseInt(maxPoints, 10, 64)
 		if perr != nil {

@@ -60,7 +60,7 @@ Retrieve candles from storage.
 - `from` (required) is the beginning of the interval, format is RFC3339, for example `2006-01-02T15:04:05+07:00`
 - `to` (optional) is the end of the interval
 - `max_points` (optional, default `100`) unsigned integer, sets aggregate interval to return not more than specified amount of candles; ignored when `aggregate` is set
-- `aggregate` (optional, overwrites `max_points`) is the aggregation interval (truncated to minute), format examples are `5m`, `600s`, `1h`
+- `aggregate` (optional, overwrites `max_points`) is the aggregation interval (must be positive, truncated to minute), format examples are `5m`, `600s`, `1h`
 
 `POST /api/insert`
 
