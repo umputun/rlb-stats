@@ -36,28 +36,25 @@ func aggregateCandles(ctx context.Context, candles []store.Candle, aggInterval t
 	// bucket origin is the earliest candle; window k spans [origin+k*interval, origin+(k+1)*interval)
 	origin := ordered[0].StartMinute
 
-	buckets := map[time.Time]store.Candle{}
-	order := make([]time.Time, 0, len(ordered))
-
-	// emit returns the aggregated buckets, skipping empty ones. order is already sorted:
-	// ordered is time-sorted and bucket times (floor division of a non-decreasing
-	// StartMinute) are appended in non-decreasing order. used both on normal completion
-	// and on cancellation, so an aborted request still yields the buckets built so far.
-	emit := func() []store.Candle {
-		for _, t := range order {
-			if len(buckets[t].Nodes) != 0 {
-				result = append(result, buckets[t])
-			}
-		}
-		return result
-	}
-
 	// whole minutes per window and the origin as whole seconds: offsets are counted in seconds
 	// rather than through time.Sub, whose Duration saturates at ~292 years and would collapse
 	// candles that far apart into one window. aggInterval is minute-truncated above, so a window
 	// offset is always a whole number of minutes and reconstructs exactly from the origin second.
 	intervalMin := int64(aggInterval / time.Minute)
 	originSec, originNsec := origin.Unix(), int64(origin.Nanosecond())
+
+	// ordered is time-sorted, so the window index never decreases and every candle for a window
+	// arrives in one run. one window is therefore open at a time: it closes when the index moves
+	// on, which is also where cancellation is honoured, so an aborted request never yields a
+	// partially-filled window. empty windows are dropped as they close.
+	var open store.Candle
+	var openIdx int64
+	started := false
+	closeWindow := func() {
+		if started && len(open.Nodes) != 0 {
+			result = append(result, open)
+		}
+	}
 
 	for _, c := range ordered {
 		// seconds from origin, floored: ordered is sorted so this is never negative, and a
@@ -67,25 +64,22 @@ func aggregateCandles(ctx context.Context, candles []store.Candle, aggInterval t
 			sec--
 		}
 		idx := sec / 60 / intervalMin
-		bucketTime := time.Unix(originSec+idx*intervalMin*60, originNsec).In(origin.Location())
-		agg, ok := buckets[bucketTime]
-		if !ok {
-			// honour cancellation only at bucket boundaries so a cancelled request never
-			// yields a partially-filled bucket; candles are processed in time order (sorted
-			// above), so every earlier bucket is already complete here
+		if !started || idx != openIdx {
+			closeWindow()
 			select {
 			case <-ctx.Done():
-				return emit()
+				return result
 			default:
 			}
-			agg = store.NewCandle()
-			agg.StartMinute = bucketTime
-			order = append(order, bucketTime)
+			open = store.NewCandle()
+			open.StartMinute = time.Unix(originSec+idx*intervalMin*60, originNsec).In(origin.Location())
+			openIdx, started = idx, true
 		}
-		buckets[bucketTime] = updateCandleAndDiscardTime(agg, c)
+		open = updateCandleAndDiscardTime(open, c)
 	}
+	closeWindow()
 
-	return emit()
+	return result
 }
 
 func updateCandleAndDiscardTime(source store.Candle, appendix store.Candle) store.Candle {
