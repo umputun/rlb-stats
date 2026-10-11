@@ -107,26 +107,32 @@ func TestTailerHandlesPartialLine(t *testing.T) {
 	assert.Equal(t, []string{"half"}, got)
 }
 
-func TestTailerDrainsOldFdOnRotation(t *testing.T) {
-	// race window: a line was written to the old fd between the last drain and the
-	// rotation detection. Without a final drain before close, that line is lost.
-	// This test writes to the old file right before renaming it; both pre-rotate and
-	// post-rotate lines must emit.
+func TestCheckRotationDrainsOldFdOnInodeChange(t *testing.T) {
+	// Deterministic coverage for the drain-before-reopen fix in checkRotation.
+	// The race window the fix closes is between drain's EOF and os.Stat: nginx writes a
+	// trailing line to the old inode while rlb-stats is between those two calls. Under
+	// Run's ticker-driven loop this gap is hard to force in a timing test; the previous
+	// try passed with the fix removed. Here we open the file at package level, do an
+	// initial drain, write a late line, rename+create, and call checkRotation directly.
+	// Mutation check (verified by hand): remove the `t.drain(ctx, st, out)` call inside
+	// checkRotation and this test must fail to see "late-on-old-fd".
 	dir := t.TempDir()
 	path := filepath.Join(dir, "access.log")
 	require.NoError(t, os.WriteFile(path, []byte("one\n"), 0o600))
 
-	_, cancel, lines, wait := startTailer(t, path, true)
-	defer wait()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	tl := &Tailer{Path: path, FromStart: true, PollInterval: time.Hour /* never auto-ticks */}
+	st := &tailState{}
+	require.NoError(t, tl.open(st))
 
-	// let the tailer settle on the file and emit "one"
-	got := collectUntil(t, lines, 1, time.Second)
-	assert.Equal(t, []string{"one"}, got)
+	out := make(chan string, 8)
 
-	// write to the old inode AND rotate in the same breath — the drain-at-top of the
-	// loop has already run on this cycle; the next drain in Run won't fire because
-	// checkRotation detects the inode change and goes down the rotation branch.
+	// 1. baseline drain: reads "one\n" and reaches EOF
+	require.True(t, tl.drain(ctx, st, out))
+	assert.Equal(t, "one", <-out)
+
+	// 2. the race window: write a late line to the (still open) old inode, THEN rotate
 	oldF, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0o600)
 	require.NoError(t, err)
 	_, err = oldF.WriteString("late-on-old-fd\n")
@@ -135,9 +141,20 @@ func TestTailerDrainsOldFdOnRotation(t *testing.T) {
 	require.NoError(t, os.Rename(path, path+".1"))
 	require.NoError(t, os.WriteFile(path, []byte("post-rotate\n"), 0o600))
 
-	got = collectUntil(t, lines, 2, 3*time.Second)
+	// 3. checkRotation must detect the inode change, drain the OLD fd (surfacing the
+	//    late line), close it, and reopen the new file. We then drain the new file too.
+	reopened, cont := tl.checkRotation(ctx, st, 20*time.Millisecond, out)
+	assert.True(t, reopened)
+	assert.True(t, cont)
+	require.True(t, tl.drain(ctx, st, out))
+
+	close(out)
+	var got []string
+	for line := range out {
+		got = append(got, line)
+	}
 	assert.Equal(t, []string{"late-on-old-fd", "post-rotate"}, got,
-		"the line written to the pre-rotate inode must drain before reopening the new inode")
+		"late write to old inode must drain before reopen; new inode must then stream")
 }
 
 func TestTailerHandlesRotation(t *testing.T) {

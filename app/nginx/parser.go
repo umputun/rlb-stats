@@ -103,11 +103,20 @@ func Parse(line string) (Parsed, error) {
 // ToRecord builds the store.LogRecord that lands in the aggregator. DestHost is the Host
 // header so each nginx vhost (radio-t.com, cdn.radio-t.com, news.radio-t.com) becomes a
 // distinct "node" in the dashboard, replacing the per-rlb-redirect-target split.
+//
+// A Host header matching the reserved AllNode value (literally "all") is mapped to a
+// safe placeholder so Candle.Update does not iterate over ["all", "all"] and double-count
+// the request. The reserved-dest check on POST /api/insert catches this on the HTTP
+// path; here we remap silently because nginx cannot know about rlb-stats internals.
 func (p Parsed) ToRecord() store.LogRecord {
+	host := p.Host
+	if host == store.AllNode {
+		host = "all-host"
+	}
 	return store.LogRecord{
 		FromIP:   p.ClientIP,
 		FileName: p.Path,
-		DestHost: p.Host,
+		DestHost: host,
 		Date:     p.Date,
 		Bytes:    p.Bytes,
 		Country:  p.Country,

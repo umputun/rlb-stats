@@ -35,8 +35,8 @@ Open http://127.0.0.1:8080/ for the dashboard.
 
 **Field notes:**
 
-- `$http_cf_connecting_ip` is Cloudflare's real-client-IP header. Without CF in front it stays empty and rlb-stats falls back to `$remote_addr`. Behind CF this field is essential — otherwise every "client IP" is a Cloudflare edge IP and per-IP dedup breaks.
-- `$http_cf_ipcountry` is Cloudflare's two-letter country code. Requires CF "IP Geolocation" to be enabled (default on all plans). Without CF the top-countries panel stays empty.
+- `$http_cf_connecting_ip` is Cloudflare's real-client-IP header. Behind CF this field is essential — otherwise every "client IP" is a Cloudflare edge IP and per-IP dedup breaks. The header is **client-controlled**: a request that reaches nginx without going through Cloudflare can set it to anything, and nginx will log that value. For deployments that are not fronted by CF — or where origin is also reachable directly — restrict the origin to CF IP ranges, or hard-code `"-"` in that field position instead of logging the variable (`'"-"'` in `log_format`), otherwise clients can spoof per-request client IPs and inflate counts.
+- `$http_cf_ipcountry` is Cloudflare's two-letter country code. Requires CF "IP Geolocation" to be enabled (default on all plans). Same client-controlled caveat as above: a forged value will land in the Countries map on a non-CF-only origin.
 - `$http_range` is logged but not yet used; it is included so the format does not need another change when probe-vs-play analysis is added later.
 
 **On restart:** the tailer seeks to the end of the file on startup, so lines nginx wrote while rlb-stats was stopped (and up to one 500 ms poll interval before shutdown) are not counted. Persisting file offset across restarts is out of scope for this version.

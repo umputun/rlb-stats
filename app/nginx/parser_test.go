@@ -188,6 +188,17 @@ func TestParseErrorsBundleOriginalLine(t *testing.T) {
 	assert.Contains(t, err.Error(), "not an nginx")
 }
 
+func TestParsedToRecordRemapsReservedHost(t *testing.T) {
+	// If a client sends Host: all and nginx logs it verbatim, DestHost would collide
+	// with the synthetic AllNode and double-count the request (Volume=2, Bytes=2x,
+	// Countries{code}=2) because Candle.Update iterates [DestHost, AllNode] and both
+	// would be "all". The parser remaps this reserved value before building the record.
+	p := Parsed{Method: "GET", Status: 200, Path: "/a.mp3", Host: "all", ClientIP: "1.1.1.1", Bytes: 100, Country: "DE"}
+	r := p.ToRecord()
+	assert.NotEqual(t, "all", r.DestHost, "reserved host must be remapped off AllNode")
+	assert.Equal(t, "all-host", r.DestHost)
+}
+
 func TestParsedToRecord(t *testing.T) {
 	p := Parsed{
 		Method:   "GET",
