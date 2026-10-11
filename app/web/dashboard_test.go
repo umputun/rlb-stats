@@ -132,7 +132,7 @@ func TestComputeTopFiles(t *testing.T) {
 				{Nodes: map[string]store.Info{"all": {Volume: 5, Files: map[string]int{"ep01.mp3": 5}}}},
 			},
 			limit: 10,
-			want:  []FileStats{{Name: "ep01.mp3", Count: 5, Percent: 100, HumanBytes: "0 B"}},
+			want:  []FileStats{{Name: "ep01.mp3", Count: 5, Percent: 100}},
 		},
 		{
 			name: "multiple files sorted and limited",
@@ -146,8 +146,8 @@ func TestComputeTopFiles(t *testing.T) {
 			},
 			limit: 2,
 			want: []FileStats{
-				{Name: "ep03.mp3", Count: 8, Percent: 100, HumanBytes: "0 B"},
-				{Name: "ep01.mp3", Count: 7, Percent: 87, HumanBytes: "0 B"},
+				{Name: "ep03.mp3", Count: 8, Percent: 100},
+				{Name: "ep01.mp3", Count: 7, Percent: 87},
 			},
 		},
 		{
@@ -159,9 +159,9 @@ func TestComputeTopFiles(t *testing.T) {
 			},
 			limit: 10,
 			want: []FileStats{
-				{Name: "a.mp3", Count: 100, Percent: 100, HumanBytes: "0 B"},
-				{Name: "b.mp3", Count: 50, Percent: 50, HumanBytes: "0 B"},
-				{Name: "c.mp3", Count: 25, Percent: 25, HumanBytes: "0 B"},
+				{Name: "a.mp3", Count: 100, Percent: 100},
+				{Name: "b.mp3", Count: 50, Percent: 50},
+				{Name: "c.mp3", Count: 25, Percent: 25},
 			},
 		},
 		{
@@ -173,7 +173,7 @@ func TestComputeTopFiles(t *testing.T) {
 				}},
 			},
 			limit: 10,
-			want:  []FileStats{{Name: "ep01.mp3", Count: 5, Percent: 100, HumanBytes: "0 B"}},
+			want:  []FileStats{{Name: "ep01.mp3", Count: 5, Percent: 100}},
 		},
 		{
 			name: "limit zero means no limit",
@@ -184,24 +184,28 @@ func TestComputeTopFiles(t *testing.T) {
 			},
 			limit: 0,
 			want: []FileStats{
-				{Name: "a.mp3", Count: 3, Percent: 100, HumanBytes: "0 B"},
-				{Name: "b.mp3", Count: 2, Percent: 66, HumanBytes: "0 B"},
-				{Name: "c.mp3", Count: 1, Percent: 33, HumanBytes: "0 B"},
+				{Name: "a.mp3", Count: 3, Percent: 100},
+				{Name: "b.mp3", Count: 2, Percent: 66},
+				{Name: "c.mp3", Count: 1, Percent: 33},
 			},
 		},
 		{
-			name: "bytes propagated proportionally by file count share",
+			name: "per-file bytes is NOT reported — would be a proportional estimate",
+			// one 100 MB download and one 1 KB range in the same minute: Volume=2,
+			// Bytes=100MB+1KB. The old proportional split would have shown ~50 MB each,
+			// which is misleading. We just drop the field until a real per-file bytes
+			// map lands on Info.
 			candles: []store.Candle{
 				{Nodes: map[string]store.Info{"all": {
-					Volume: 10,
-					Bytes:  1000,
-					Files:  map[string]int{"big.mp3": 7, "small.mp3": 3},
+					Volume: 2,
+					Bytes:  100*1024*1024 + 1024,
+					Files:  map[string]int{"big.mp3": 1, "small.mp3": 1},
 				}}},
 			},
 			limit: 10,
 			want: []FileStats{
-				{Name: "big.mp3", Count: 7, Bytes: 700, HumanBytes: "700 B", Percent: 100},
-				{Name: "small.mp3", Count: 3, Bytes: 300, HumanBytes: "300 B", Percent: 42},
+				{Name: "big.mp3", Count: 1, Percent: 100},
+				{Name: "small.mp3", Count: 1, Percent: 100},
 			},
 		},
 	}

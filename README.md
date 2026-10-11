@@ -23,11 +23,13 @@ Then point rlb-stats at the log file:
 ```sh
 docker run --rm \
     -p 8080:8080 \
-    -v /var/log/nginx/access.log:/var/log/nginx/access.log:ro \
+    -v /var/log/nginx:/var/log/nginx:ro \
     -v /tmp:/tmp \
     -e NGINX_LOG=/var/log/nginx/access.log \
     umputun/rlb-stats:latest
 ```
+
+Mount the directory, not the file: logrotate renames `access.log` and nginx reopens a new file with a new inode. A single-file bind mount is pinned to the host inode at container start, so after the first rotation rlb-stats would keep reading the old (now rotated-away) inode and silently stop counting. With the directory mount, the tailer's inode-change detection takes over.
 
 Open http://127.0.0.1:8080/ for the dashboard.
 
@@ -37,6 +39,8 @@ Open http://127.0.0.1:8080/ for the dashboard.
 - `$http_cf_ipcountry` is Cloudflare's two-letter country code. Requires CF "IP Geolocation" to be enabled (default on all plans). Without CF the top-countries panel stays empty.
 - `$http_range` is logged but not yet used; it is included so the format does not need another change when probe-vs-play analysis is added later.
 
+**On restart:** the tailer seeks to the end of the file on startup, so lines nginx wrote while rlb-stats was stopped (and up to one 500 ms poll interval before shutdown) are not counted. Persisting file offset across restarts is out of scope for this version.
+
 **Known behaviour change vs RLB mode:** one RLB redirect used to be one download regardless of play duration. Tailing nginx, a browser `<audio>` streaming for an hour produces up to ~60 unique file+IP+minute pairs = up to 60 "downloads". Apple Podcasts fetches in a few large ranges up front and inflates less. Historical RLB-era numbers are **not comparable** to nginx-tail-mode numbers.
 
 ### Dashboard
@@ -45,7 +49,7 @@ Server-side rendered using HTMX, Picocss and ECharts. Loads JS/CSS from `cdn.jsd
 
 - Summary cards: total downloads for 1 hour, 24 hours, 1 week, 1 month and all time, with total bandwidth
 - Downloads histogram (ECharts bar chart) with selectable periods (1h, 12h, 24h, 10d, 30d, all)
-- Top files with download count and bandwidth
+- Top files with download count
 - Per-vhost (node) breakdown with downloads and bandwidth
 - Top countries (nginx tail mode only, requires Cloudflare)
 - Peak hours heatmap (24h x 7 days)

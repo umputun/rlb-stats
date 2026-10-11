@@ -107,6 +107,39 @@ func TestTailerHandlesPartialLine(t *testing.T) {
 	assert.Equal(t, []string{"half"}, got)
 }
 
+func TestTailerDrainsOldFdOnRotation(t *testing.T) {
+	// race window: a line was written to the old fd between the last drain and the
+	// rotation detection. Without a final drain before close, that line is lost.
+	// This test writes to the old file right before renaming it; both pre-rotate and
+	// post-rotate lines must emit.
+	dir := t.TempDir()
+	path := filepath.Join(dir, "access.log")
+	require.NoError(t, os.WriteFile(path, []byte("one\n"), 0o600))
+
+	_, cancel, lines, wait := startTailer(t, path, true)
+	defer wait()
+	defer cancel()
+
+	// let the tailer settle on the file and emit "one"
+	got := collectUntil(t, lines, 1, time.Second)
+	assert.Equal(t, []string{"one"}, got)
+
+	// write to the old inode AND rotate in the same breath — the drain-at-top of the
+	// loop has already run on this cycle; the next drain in Run won't fire because
+	// checkRotation detects the inode change and goes down the rotation branch.
+	oldF, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0o600)
+	require.NoError(t, err)
+	_, err = oldF.WriteString("late-on-old-fd\n")
+	require.NoError(t, err)
+	require.NoError(t, oldF.Close())
+	require.NoError(t, os.Rename(path, path+".1"))
+	require.NoError(t, os.WriteFile(path, []byte("post-rotate\n"), 0o600))
+
+	got = collectUntil(t, lines, 2, 3*time.Second)
+	assert.Equal(t, []string{"late-on-old-fd", "post-rotate"}, got,
+		"the line written to the pre-rotate inode must drain before reopening the new inode")
+}
+
 func TestTailerHandlesRotation(t *testing.T) {
 	// classic logrotate: rename access.log -> access.log.1, create new access.log.
 	// The tailer must detect the new inode and read the new file from offset 0.
@@ -214,6 +247,42 @@ loop:
 	}
 	assert.True(t, closed, "lines channel must close when ctx is cancelled")
 	wait()
+}
+
+func TestTailerSurvivesOversizedLine(t *testing.T) {
+	// regression trap for the critical finding: an oversized line used to permanently
+	// poison the carry buffer. revmux reproduced the bug with a scratch tail.go after a
+	// 2 MiB line, two normal lines, by `cap() > N` plus `s = s[:0]` (capacity sticks).
+	// This test writes an over-cap line sandwiched between normal lines and asserts the
+	// tailer drops the oversized one but keeps emitting the normal ones.
+	dir := t.TempDir()
+	path := filepath.Join(dir, "access.log")
+	require.NoError(t, os.WriteFile(path, []byte(""), 0o600))
+
+	_, cancel, lines, wait := startTailer(t, path, true)
+	defer wait()
+	defer cancel()
+
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0o600)
+	require.NoError(t, err)
+	defer f.Close()
+
+	_, err = f.WriteString("before\n")
+	require.NoError(t, err)
+	// one line well above maxLineBytes (1 MiB) — pathologically long UA, malicious writer
+	huge := make([]byte, 2*1024*1024)
+	for i := range huge {
+		huge[i] = 'x'
+	}
+	huge = append(huge, '\n')
+	_, err = f.Write(huge)
+	require.NoError(t, err)
+	_, err = f.WriteString("after1\nafter2\n")
+	require.NoError(t, err)
+
+	got := collectUntil(t, lines, 3, 3*time.Second)
+	assert.Equal(t, []string{"before", "after1", "after2"}, got,
+		"oversized line must be dropped but subsequent lines must still emit")
 }
 
 func TestTailerSurvivesMissingFileAtStartup(t *testing.T) {

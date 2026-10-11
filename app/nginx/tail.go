@@ -31,10 +31,11 @@ const (
 // of as free variables inside Run so Run can delegate to small methods and stay below
 // cyclomatic complexity 30.
 type tailState struct {
-	file    *os.File
-	reader  *bufio.Reader
-	inode   uint64
-	partial []byte
+	file             *os.File
+	reader           *bufio.Reader
+	inode            uint64
+	partial          []byte
+	skipUntilNewline bool // dropping chunks of an over-length line until its newline arrives
 }
 
 // Run follows the file until ctx is done. Every full line (newline-terminated) is sent
@@ -73,7 +74,7 @@ func (t Tailer) Run(ctx context.Context, out chan<- string) {
 				}
 				continue
 			}
-		} else if reopened, cont := t.checkRotation(ctx, st, interval); cont {
+		} else if reopened, cont := t.checkRotation(ctx, st, interval, out); cont {
 			if !reopened {
 				return
 			}
@@ -116,7 +117,11 @@ func (t *Tailer) open(st *tailState) error {
 	st.inode = fileInode(fi)
 	st.file = nf
 	st.reader = bufio.NewReader(nf)
-	st.partial = st.partial[:0]
+	// release the buffer rather than slicing to zero: append grows capacity and never
+	// shrinks it, so slicing-to-zero after an oversized line would keep the giant backing
+	// array and silently fail the maxLineBytes check for everything after.
+	st.partial = nil
+	st.skipUntilNewline = false
 	t.FromStart = true
 	return nil
 }
@@ -145,14 +150,39 @@ func (t *Tailer) drain(ctx context.Context, st *tailState, out chan<- string) bo
 }
 
 // appendAndMaybeEmit extends st.partial with chunk; on newline it emits a full line.
-// Returns false only on ctx cancellation during the send.
+// On overflow (one logical line exceeds maxLineBytes) it enters a "skip until newline"
+// state, drops every byte of the overlong line including this chunk, and resumes normal
+// emission from the first line after it. Returns false only on ctx cancellation during
+// the send.
+//
+// The length-based check and the full slice release matter: capacity grows and never
+// shrinks via append, so `cap(st.partial) > N` plus `st.partial = st.partial[:0]`
+// permanently poisons the tailer after one oversized line — every subsequent append
+// still exceeds N and gets discarded. Using len() plus nil-ing the slice resets both.
 func appendAndMaybeEmit(ctx context.Context, st *tailState, chunk []byte, out chan<- string) bool {
-	st.partial = append(st.partial, chunk...)
-	if cap(st.partial) > maxLineBytes {
-		// drop the overlong line and continue with a fresh buffer
-		st.partial = st.partial[:0]
+	// skip state: the current logical line already overflowed; drain chunks until we
+	// see the terminating newline, then drop both the state and the carry buffer.
+	if st.skipUntilNewline {
+		if chunk[len(chunk)-1] == '\n' {
+			st.skipUntilNewline = false
+			st.partial = nil
+		}
 		return true
 	}
+
+	// pre-check: if adding this chunk would push the carry buffer past the cap, enter
+	// skip state. If the chunk already carries its own newline, settle the state inline.
+	if len(st.partial)+len(chunk) > maxLineBytes {
+		if chunk[len(chunk)-1] == '\n' {
+			st.partial = nil
+			return true
+		}
+		st.skipUntilNewline = true
+		st.partial = nil
+		return true
+	}
+
+	st.partial = append(st.partial, chunk...)
 	if chunk[len(chunk)-1] != '\n' {
 		return true
 	}
@@ -168,7 +198,14 @@ func appendAndMaybeEmit(ctx context.Context, st *tailState, chunk []byte, out ch
 // checkRotation stats the path and reopens on inode change or truncation.
 // Returns (reopened, cont): cont=true means skip the ticker wait; reopened=false means
 // a reopen failed and the ctx was cancelled during the retry delay.
-func (t *Tailer) checkRotation(ctx context.Context, st *tailState, interval time.Duration) (reopened, cont bool) {
+//
+// On inode change we drain the old fd one final time before open() closes it: any lines
+// nginx wrote between drain's EOF and this stat land on the old inode and would otherwise
+// be lost. The grace drain closes that millisecond-wide window; a bigger "keep the old fd
+// open across a few polls" grace covers the window where nginx hasn't yet reopened after
+// logrotate's rename+create but is left for a follow-up — the typical loss there is a
+// handful of lines on daily rotations.
+func (t *Tailer) checkRotation(ctx context.Context, st *tailState, interval time.Duration, out chan<- string) (reopened, cont bool) {
 	fi, err := os.Stat(t.Path)
 	if err != nil {
 		// path disappeared; keep current fd draining until a newer open succeeds
@@ -177,7 +214,12 @@ func (t *Tailer) checkRotation(ctx context.Context, st *tailState, interval time
 	if fileInode(fi) == st.inode && fi.Size() >= currentOffset(st.file) {
 		return true, false
 	}
-	// rotation (inode changed) or truncation (size < offset): reopen from the start
+	// rotation (inode changed) or truncation (size < offset): drain the old fd for any
+	// trailing lines nginx wrote between the drain-at-the-top and this stat, then reopen
+	// from the start of the new file. The out channel is the same one Run drains to.
+	if st.file != nil && !t.drain(ctx, st, out) {
+		return false, true
+	}
 	t.FromStart = true
 	if err := t.open(st); err != nil {
 		if !waitOrClosed(ctx, interval) {

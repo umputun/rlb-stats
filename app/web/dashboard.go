@@ -32,13 +32,13 @@ type SummaryData struct {
 	HumanBytes string // humanised Bytes for direct template use
 }
 
-// FileStats holds a filename with its count, bytes, and percent of max for CSS bar widths
+// FileStats holds a filename with its count and percent of max for CSS bar widths.
+// Bytes-per-file is intentionally absent: see computeTopFiles for why a per-file
+// bandwidth figure would be an estimate, not a measurement.
 type FileStats struct {
-	Name       string
-	Count      int
-	Bytes      int64
-	HumanBytes string
-	Percent    int // 0-100, relative to the top file
+	Name    string
+	Count   int
+	Percent int // 0-100, relative to the top file
 }
 
 // NodeStats holds a node name with its volume, bytes, and percent of max
@@ -117,96 +117,83 @@ func formatBytes(v float64, unit string, decimals int) string {
 	return fmt.Sprintf("%.*f %s", decimals, v, unit)
 }
 
-// computeTopFiles aggregates file download counts AND bytes from the "all" node across
-// candles, sorts descending, and returns top N with percent-of-max for CSS bar widths.
-// The bytes-per-file breakdown lives on AllNode because Files is only tracked there.
+// computeTopFiles aggregates file download counts from the "all" node across candles,
+// sorts descending, and returns top N with percent-of-max for CSS bar widths. Per-file
+// bytes is intentionally NOT computed here: the storage keeps bytes per-candle and
+// Files only as counts, so a per-file bandwidth figure would be a proportional estimate
+// and misleading (one 100 MB download and one 1 KB range in the same minute would show
+// as ~50 MB each). Per-file bandwidth needs a per-file bytes map on Info; left for a
+// follow-up PR. Per-vhost and total bandwidth stay exact.
 func computeTopFiles(candles []store.Candle, limit int) []FileStats {
-	counts := map[string]int{}
-	bytesPerFile := map[string]int64{}
-	for _, c := range candles {
-		if info, ok := c.Nodes[store.AllNode]; ok {
-			for name, count := range info.Files {
-				counts[name] += count
-			}
-			// bytes land as a per-file breakdown only when the file appears in the Files
-			// map on this candle; we proportion the Info.Bytes by file-count share.
-			// a per-file bytes map on Info would be cleaner but changes the schema more
-			// than this PR needs — call this out as deferred.
-			if info.Volume > 0 {
-				share := float64(info.Bytes) / float64(info.Volume)
-				for name, count := range info.Files {
-					bytesPerFile[name] += int64(share * float64(count))
-				}
-			}
-		}
-	}
-
-	files := make([]FileStats, 0, len(counts))
-	for name, count := range counts {
-		files = append(files, FileStats{
-			Name:       name,
-			Count:      count,
-			Bytes:      bytesPerFile[name],
-			HumanBytes: humanBytes(bytesPerFile[name]),
-		})
-	}
-	sort.Slice(files, func(i, j int) bool {
-		if files[i].Count != files[j].Count {
-			return files[i].Count > files[j].Count
-		}
-		return files[i].Name < files[j].Name
-	})
-
-	if limit > 0 && len(files) > limit {
-		files = files[:limit]
-	}
-
-	if len(files) > 0 {
-		maxCount := files[0].Count
-		for i := range files {
-			files[i].Percent = files[i].Count * 100 / maxCount
-		}
-	}
-
-	return files
+	return topByKey(candles, limit,
+		func(info store.Info) map[string]int { return info.Files },
+		func(key string, count, percent int) FileStats {
+			return FileStats{Name: key, Count: count, Percent: percent}
+		},
+	)
 }
 
 // computeTopCountries sums per-country download counts from the "all" node across
 // candles. Empty country codes are already dropped at parse time, so no further
 // filtering is needed here.
 func computeTopCountries(candles []store.Candle, limit int) []CountryStats {
+	return topByKey(candles, limit,
+		func(info store.Info) map[string]int { return info.Countries },
+		func(key string, count, percent int) CountryStats {
+			return CountryStats{Code: key, Count: count, Percent: percent}
+		},
+	)
+}
+
+// topByKey is the shared body of computeTopFiles and computeTopCountries. getMap picks
+// which map to count by (Files or Countries); build turns a key, count, percent triple
+// into the typed row the UI wants.
+func topByKey[T any](
+	candles []store.Candle,
+	limit int,
+	getMap func(store.Info) map[string]int,
+	build func(key string, count, percent int) T,
+) []T {
 	counts := map[string]int{}
 	for _, c := range candles {
 		if info, ok := c.Nodes[store.AllNode]; ok {
-			for code, cnt := range info.Countries {
-				counts[code] += cnt
+			for k, v := range getMap(info) {
+				counts[k] += v
 			}
 		}
 	}
 
-	countries := make([]CountryStats, 0, len(counts))
-	for code, count := range counts {
-		countries = append(countries, CountryStats{Code: code, Count: count})
+	type kv struct {
+		key   string
+		count int
 	}
-	sort.Slice(countries, func(i, j int) bool {
-		if countries[i].Count != countries[j].Count {
-			return countries[i].Count > countries[j].Count
+	rows := make([]kv, 0, len(counts))
+	for k, c := range counts {
+		rows = append(rows, kv{k, c})
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].count != rows[j].count {
+			return rows[i].count > rows[j].count
 		}
-		return countries[i].Code < countries[j].Code
+		return rows[i].key < rows[j].key
 	})
-
-	if limit > 0 && len(countries) > limit {
-		countries = countries[:limit]
+	if limit > 0 && len(rows) > limit {
+		rows = rows[:limit]
 	}
 
-	if len(countries) > 0 {
-		maxCount := countries[0].Count
-		for i := range countries {
-			countries[i].Percent = countries[i].Count * 100 / maxCount
+	result := make([]T, len(rows))
+	maxCount := 0
+	if len(rows) > 0 {
+		maxCount = rows[0].count
+	}
+	for i, r := range rows {
+		pct := 0
+		if maxCount > 0 {
+			pct = r.count * 100 / maxCount
 		}
+		result[i] = build(r.key, r.count, pct)
 	}
-
-	return countries
+	return result
 }
 
 // computeNodeStats sums per-node Volume and Bytes (excluding "all"), sorts descending,

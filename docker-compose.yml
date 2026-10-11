@@ -14,9 +14,10 @@ services:
 
     volumes:
     - /tmp:/tmp
-    # Mount the nginx access log so rlb-stats can tail it. The path on the right side
-    # must match --nginx-log / NGINX_LOG below. Read-only is enough.
-    # - /var/log/nginx/access.log:/var/log/nginx/access.log:ro
+    # Mount the directory, not the file. logrotate renames access.log to a new inode
+    # and a single-file bind mount would stay pinned to the old (rotated) inode, so
+    # rlb-stats would silently stop counting after the first rotation.
+    # - /var/log/nginx:/var/log/nginx:ro
 
     ports:
     - "8080:8080"
