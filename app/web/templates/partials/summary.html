@@ -5,7 +5,7 @@
         {{range .Summaries}}
         <article>
             <h3>{{.Count}}</h3>
-            <p>{{.Label}}</p>
+            <p>{{.Label}}{{if .Bytes}}<br><small>{{.HumanBytes}}</small>{{end}}</p>
         </article>
         {{end}}
     </div>

@@ -1,0 +1,27 @@
+{{define "countries"}}
+{{if .Countries}}
+<section>
+    <h2>Top Countries</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Country</th>
+                <th>Downloads</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range $i, $c := .Countries}}
+            <tr>
+                <td>{{inc $i}}</td>
+                <td>{{$c.Code}}</td>
+                <td>{{$c.Count}}</td>
+                <td><div class="bar-fill" style="width:{{$c.Percent}}%"></div></td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</section>
+{{end}}
+{{end}}

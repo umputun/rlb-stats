@@ -56,8 +56,8 @@ var testsTable = []struct {
 		},
 		Candle{ // from first 3 entries
 			Nodes: map[string]Info{
-				"n6.radio-t.com": {Volume: 2, Files: map[string]int{}},
-				"all":            {Volume: 2, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1, "/rtfiles/rt_podcast562.mp3": 1}},
+				"n6.radio-t.com": {Volume: 2, Files: map[string]int{}, Countries: map[string]int{}},
+				"all":            {Volume: 2, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1, "/rtfiles/rt_podcast562.mp3": 1}, Countries: map[string]int{}},
 			},
 			StartMinute: time.Time{},
 		},
@@ -73,8 +73,8 @@ var testsTable = []struct {
 		},
 		Candle{ // from 4th entry
 			Nodes: map[string]Info{
-				"n7.radio-t.com": {Volume: 1, Files: map[string]int{}},
-				"all":            {Volume: 1, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
+				"n7.radio-t.com": {Volume: 1, Files: map[string]int{}, Countries: map[string]int{}},
+				"all":            {Volume: 1, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}, Countries: map[string]int{}},
 			},
 			StartMinute: time.Time{}.Add(time.Minute),
 		},
@@ -121,6 +121,22 @@ func TestAggregatorConcurrentStore(t *testing.T) {
 	candle, ok := parser.Flush()
 	assert.True(t, ok, "buffered entries remain after the stores, so Flush must emit a candle")
 	assert.NotEmpty(t, candle.Nodes)
+}
+
+func TestBuildCandleDedupSumsBytes(t *testing.T) {
+	// one listener's HTTP range burst: three 206s for the same mp3 within one minute.
+	// Volume counts once, Bytes sum across all three. This proves the dedup path keeps
+	// bandwidth accurate while treating the burst as a single download.
+	candle := buildCandle([]LogRecord{
+		{FromIP: "1.1.1.1", FileName: "/a.mp3", DestHost: "cdn.x", Date: time.Time{}, Bytes: 500000, Country: "US"},
+		{FromIP: "1.1.1.1", FileName: "/a.mp3", DestHost: "cdn.x", Date: time.Time{}, Bytes: 500000, Country: "US"},
+		{FromIP: "1.1.1.1", FileName: "/a.mp3", DestHost: "cdn.x", Date: time.Time{}, Bytes: 200000, Country: "US"},
+	})
+	assert.Equal(t, 1, candle.Nodes["all"].Volume, "range burst counts as one download")
+	assert.Equal(t, 1, candle.Nodes["cdn.x"].Volume)
+	assert.Equal(t, int64(1200000), candle.Nodes["all"].Bytes, "bytes sum across the burst")
+	assert.Equal(t, int64(1200000), candle.Nodes["cdn.x"].Bytes)
+	assert.Equal(t, 1, candle.Nodes["all"].Countries["US"], "country counted once per download, not per range chunk")
 }
 
 func TestBuildCandleDedupeKeyNoCollision(t *testing.T) {

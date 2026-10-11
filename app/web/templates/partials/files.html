@@ -8,6 +8,7 @@
                 <th>#</th>
                 <th>File</th>
                 <th>Downloads</th>
+                <th>Bandwidth</th>
                 <th></th>
             </tr>
         </thead>
@@ -17,6 +18,7 @@
                 <td>{{inc $i}}</td>
                 <td>{{$f.Name}}</td>
                 <td>{{$f.Count}}</td>
+                <td>{{$f.HumanBytes}}</td>
                 <td><div class="bar-fill" style="width:{{$f.Percent}}%"></div></td>
             </tr>
             {{end}}

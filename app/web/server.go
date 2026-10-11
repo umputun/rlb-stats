@@ -288,7 +288,13 @@ func (s *Server) buildDashboardData(r *http.Request) (*DashboardData, error) {
 		if !sp.isAll {
 			candles = allCandles[firstIndexSince(allCandles, now.Add(-sp.dur)):]
 		}
-		summaries = append(summaries, SummaryData{Label: sp.label, Count: computeSummary(candles)})
+		count, bytesSum := computeSummary(candles)
+		summaries = append(summaries, SummaryData{
+			Label:      sp.label,
+			Count:      count,
+			Bytes:      bytesSum,
+			HumanBytes: humanBytes(bytesSum),
+		})
 	}
 
 	// compute aggregation duration for chart (~100 points)
@@ -300,6 +306,7 @@ func (s *Server) buildDashboardData(r *http.Request) (*DashboardData, error) {
 		ChartJSON:   buildChartData(ctx, chartCandles, aggDuration),
 		Files:       computeTopFiles(chartCandles, 20),
 		Nodes:       computeNodeStats(chartCandles),
+		Countries:   computeTopCountries(chartCandles, 20),
 		HeatmapJSON: buildHeatmapData(computeHeatmap(chartCandles)),
 		Period:      period,
 	}

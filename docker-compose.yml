@@ -14,33 +14,16 @@ services:
 
     volumes:
     - /tmp:/tmp
+    # Mount the nginx access log so rlb-stats can tail it. The path on the right side
+    # must match --nginx-log / NGINX_LOG below. Read-only is enough.
+    # - /var/log/nginx/access.log:/var/log/nginx/access.log:ro
 
     ports:
     - "8080:8080"
 
-  rlb:
-    # this server redirects traffic into itself
-    # and it's only purpose is generating raw data for rlb-stats,
-    # see README.md for details
-    image: umputun/rlb:master
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "5"
-    hostname: rlb
-    restart: always
-    container_name: rlb
-
-    ports:
-    - 7070:7070
-
-    volumes:
-    - ./rlb.config.yml:/srv/rlb.yml
-
-    environment:
-    - CONF=/srv/rlb.yml
-    - STATS=http://rlb-stats:8080/api/insert
-    - TIMEOUT=10s
-    - REFRESH=60s
-    - DEBUG=true
+    # Uncomment to turn on nginx tail mode. See README for the required log_format.
+    # environment:
+    # - NGINX_LOG=/var/log/nginx/access.log
+    # - NGINX_STATUS=200,206
+    # - NGINX_PATH=*.mp3
+    # - NGINX_HOST=cdn.radio-t.com

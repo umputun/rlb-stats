@@ -94,10 +94,20 @@ func updateCandleAndDiscardTime(source store.Candle, appendix store.Candle) stor
 		if !ok {
 			m = store.NewInfo()
 		}
+		if m.Files == nil {
+			m.Files = map[string]int{}
+		}
+		if m.Countries == nil {
+			m.Countries = map[string]int{}
+		}
 		for file := range appendix.Nodes[n].Files {
 			m.Files[file] += appendix.Nodes[n].Files[file]
 		}
+		for country, cnt := range appendix.Nodes[n].Countries {
+			m.Countries[country] += cnt
+		}
 		m.Volume += appendix.Nodes[n].Volume
+		m.Bytes += appendix.Nodes[n].Bytes
 		source.Nodes[n] = m
 	}
 	return source

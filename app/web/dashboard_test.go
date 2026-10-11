@@ -62,10 +62,55 @@ func TestComputeSummary(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := computeSummary(tc.candles)
+			got, _ := computeSummary(tc.candles)
 			assert.Equal(t, tc.want, got)
 		})
 	}
+}
+
+func TestComputeSummaryBytes(t *testing.T) {
+	candles := []store.Candle{
+		{Nodes: map[string]store.Info{"all": {Volume: 2, Bytes: 1500}}},
+		{Nodes: map[string]store.Info{"all": {Volume: 3, Bytes: 2500}}},
+		{Nodes: map[string]store.Info{"node1": {Volume: 10, Bytes: 999}}}, // ignored, not AllNode
+	}
+	count, bytesSum := computeSummary(candles)
+	assert.Equal(t, 5, count)
+	assert.Equal(t, int64(4000), bytesSum)
+}
+
+func TestHumanBytes(t *testing.T) {
+	cases := []struct {
+		in   int64
+		want string
+	}{
+		{0, "0 B"},
+		{500, "500 B"},
+		{1024, "1.00 KB"},
+		{1536, "1.50 KB"},
+		{1024 * 1024, "1.00 MB"},
+		{int64(2.5 * 1024 * 1024), "2.50 MB"},
+		{1024 * 1024 * 1024, "1.00 GB"},
+		{int64(2236416), "2.13 MB"}, // the e2e sum: 2097152 + 139264
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.want, humanBytes(c.in), "humanBytes(%d)", c.in)
+	}
+}
+
+func TestComputeTopCountries(t *testing.T) {
+	candles := []store.Candle{
+		{Nodes: map[string]store.Info{"all": {Volume: 3, Countries: map[string]int{"US": 2, "DE": 1}}}},
+		{Nodes: map[string]store.Info{"all": {Volume: 2, Countries: map[string]int{"US": 1, "GB": 1}}}},
+		{Nodes: map[string]store.Info{"all": {Volume: 1, Countries: map[string]int{}}}},            // empty map, ignored
+		{Nodes: map[string]store.Info{"node1": {Volume: 100, Countries: map[string]int{"XX": 10}}}}, // non-all ignored
+	}
+	got := computeTopCountries(candles, 10)
+	assert.Equal(t, []CountryStats{
+		{Code: "US", Count: 3, Percent: 100},
+		{Code: "DE", Count: 1, Percent: 33},
+		{Code: "GB", Count: 1, Percent: 33},
+	}, got)
 }
 
 func TestComputeTopFiles(t *testing.T) {
@@ -87,7 +132,7 @@ func TestComputeTopFiles(t *testing.T) {
 				{Nodes: map[string]store.Info{"all": {Volume: 5, Files: map[string]int{"ep01.mp3": 5}}}},
 			},
 			limit: 10,
-			want:  []FileStats{{Name: "ep01.mp3", Count: 5, Percent: 100}},
+			want:  []FileStats{{Name: "ep01.mp3", Count: 5, Percent: 100, HumanBytes: "0 B"}},
 		},
 		{
 			name: "multiple files sorted and limited",
@@ -101,8 +146,8 @@ func TestComputeTopFiles(t *testing.T) {
 			},
 			limit: 2,
 			want: []FileStats{
-				{Name: "ep03.mp3", Count: 8, Percent: 100},
-				{Name: "ep01.mp3", Count: 7, Percent: 87},
+				{Name: "ep03.mp3", Count: 8, Percent: 100, HumanBytes: "0 B"},
+				{Name: "ep01.mp3", Count: 7, Percent: 87, HumanBytes: "0 B"},
 			},
 		},
 		{
@@ -114,9 +159,9 @@ func TestComputeTopFiles(t *testing.T) {
 			},
 			limit: 10,
 			want: []FileStats{
-				{Name: "a.mp3", Count: 100, Percent: 100},
-				{Name: "b.mp3", Count: 50, Percent: 50},
-				{Name: "c.mp3", Count: 25, Percent: 25},
+				{Name: "a.mp3", Count: 100, Percent: 100, HumanBytes: "0 B"},
+				{Name: "b.mp3", Count: 50, Percent: 50, HumanBytes: "0 B"},
+				{Name: "c.mp3", Count: 25, Percent: 25, HumanBytes: "0 B"},
 			},
 		},
 		{
@@ -128,7 +173,7 @@ func TestComputeTopFiles(t *testing.T) {
 				}},
 			},
 			limit: 10,
-			want:  []FileStats{{Name: "ep01.mp3", Count: 5, Percent: 100}},
+			want:  []FileStats{{Name: "ep01.mp3", Count: 5, Percent: 100, HumanBytes: "0 B"}},
 		},
 		{
 			name: "limit zero means no limit",
@@ -139,9 +184,24 @@ func TestComputeTopFiles(t *testing.T) {
 			},
 			limit: 0,
 			want: []FileStats{
-				{Name: "a.mp3", Count: 3, Percent: 100},
-				{Name: "b.mp3", Count: 2, Percent: 66},
-				{Name: "c.mp3", Count: 1, Percent: 33},
+				{Name: "a.mp3", Count: 3, Percent: 100, HumanBytes: "0 B"},
+				{Name: "b.mp3", Count: 2, Percent: 66, HumanBytes: "0 B"},
+				{Name: "c.mp3", Count: 1, Percent: 33, HumanBytes: "0 B"},
+			},
+		},
+		{
+			name: "bytes propagated proportionally by file count share",
+			candles: []store.Candle{
+				{Nodes: map[string]store.Info{"all": {
+					Volume: 10,
+					Bytes:  1000,
+					Files:  map[string]int{"big.mp3": 7, "small.mp3": 3},
+				}}},
+			},
+			limit: 10,
+			want: []FileStats{
+				{Name: "big.mp3", Count: 7, Bytes: 700, HumanBytes: "700 B", Percent: 100},
+				{Name: "small.mp3", Count: 3, Bytes: 300, HumanBytes: "300 B", Percent: 42},
 			},
 		},
 	}
@@ -187,9 +247,9 @@ func TestComputeNodeStats(t *testing.T) {
 				}},
 			},
 			want: []NodeStats{
-				{Name: "node2", Volume: 20, Percent: 100},
-				{Name: "node1", Volume: 15, Percent: 75},
-				{Name: "node3", Volume: 15, Percent: 75},
+				{Name: "node2", Volume: 20, Percent: 100, HumanBytes: "0 B"},
+				{Name: "node1", Volume: 15, Percent: 75, HumanBytes: "0 B"},
+				{Name: "node3", Volume: 15, Percent: 75, HumanBytes: "0 B"},
 			},
 		},
 		{
@@ -201,7 +261,23 @@ func TestComputeNodeStats(t *testing.T) {
 				}},
 			},
 			want: []NodeStats{
-				{Name: "node1", Volume: 10, Percent: 100},
+				{Name: "node1", Volume: 10, Percent: 100, HumanBytes: "0 B"},
+			},
+		},
+		{
+			name: "bytes per node accumulated",
+			candles: []store.Candle{
+				{Nodes: map[string]store.Info{
+					"all":             {Volume: 20, Bytes: 2000},
+					"cdn.radio-t.com": {Volume: 20, Bytes: 2000},
+				}},
+				{Nodes: map[string]store.Info{
+					"all":             {Volume: 5, Bytes: 500},
+					"cdn.radio-t.com": {Volume: 5, Bytes: 500},
+				}},
+			},
+			want: []NodeStats{
+				{Name: "cdn.radio-t.com", Volume: 25, Bytes: 2500, HumanBytes: "2.44 KB", Percent: 100},
 			},
 		},
 	}
