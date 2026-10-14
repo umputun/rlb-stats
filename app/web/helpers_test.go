@@ -92,8 +92,8 @@ func Test_limitCandleFiles(t *testing.T) {
 
 var storedCandle = store.Candle{
 	Nodes: map[string]store.Info{
-		"n6.radio-t.com": {Volume: 1, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
-		"all":            {Volume: 1, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}},
+		"n6.radio-t.com": {Volume: 1, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}, Countries: map[string]int{}},
+		"all":            {Volume: 1, Files: map[string]int{"/rtfiles/rt_podcast561.mp3": 1}, Countries: map[string]int{}},
 	},
 	StartMinute: time.Unix(0, 0),
 }

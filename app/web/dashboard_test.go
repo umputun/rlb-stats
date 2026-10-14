@@ -62,10 +62,55 @@ func TestComputeSummary(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := computeSummary(tc.candles)
+			got, _ := computeSummary(tc.candles)
 			assert.Equal(t, tc.want, got)
 		})
 	}
+}
+
+func TestComputeSummaryBytes(t *testing.T) {
+	candles := []store.Candle{
+		{Nodes: map[string]store.Info{"all": {Volume: 2, Bytes: 1500}}},
+		{Nodes: map[string]store.Info{"all": {Volume: 3, Bytes: 2500}}},
+		{Nodes: map[string]store.Info{"node1": {Volume: 10, Bytes: 999}}}, // ignored, not AllNode
+	}
+	count, bytesSum := computeSummary(candles)
+	assert.Equal(t, 5, count)
+	assert.Equal(t, int64(4000), bytesSum)
+}
+
+func TestHumanBytes(t *testing.T) {
+	cases := []struct {
+		in   int64
+		want string
+	}{
+		{0, "0 B"},
+		{500, "500 B"},
+		{1024, "1.00 KB"},
+		{1536, "1.50 KB"},
+		{1024 * 1024, "1.00 MB"},
+		{int64(2.5 * 1024 * 1024), "2.50 MB"},
+		{1024 * 1024 * 1024, "1.00 GB"},
+		{int64(2236416), "2.13 MB"}, // the e2e sum: 2097152 + 139264
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.want, humanBytes(c.in), "humanBytes(%d)", c.in)
+	}
+}
+
+func TestComputeTopCountries(t *testing.T) {
+	candles := []store.Candle{
+		{Nodes: map[string]store.Info{"all": {Volume: 3, Countries: map[string]int{"US": 2, "DE": 1}}}},
+		{Nodes: map[string]store.Info{"all": {Volume: 2, Countries: map[string]int{"US": 1, "GB": 1}}}},
+		{Nodes: map[string]store.Info{"all": {Volume: 1, Countries: map[string]int{}}}},            // empty map, ignored
+		{Nodes: map[string]store.Info{"node1": {Volume: 100, Countries: map[string]int{"XX": 10}}}}, // non-all ignored
+	}
+	got := computeTopCountries(candles, 10)
+	assert.Equal(t, []CountryStats{
+		{Code: "US", Count: 3, Percent: 100},
+		{Code: "DE", Count: 1, Percent: 33},
+		{Code: "GB", Count: 1, Percent: 33},
+	}, got)
 }
 
 func TestComputeTopFiles(t *testing.T) {
@@ -144,6 +189,25 @@ func TestComputeTopFiles(t *testing.T) {
 				{Name: "c.mp3", Count: 1, Percent: 33},
 			},
 		},
+		{
+			name: "per-file bytes is NOT reported — would be a proportional estimate",
+			// one 100 MB download and one 1 KB range in the same minute: Volume=2,
+			// Bytes=100MB+1KB. The old proportional split would have shown ~50 MB each,
+			// which is misleading. We just drop the field until a real per-file bytes
+			// map lands on Info.
+			candles: []store.Candle{
+				{Nodes: map[string]store.Info{"all": {
+					Volume: 2,
+					Bytes:  100*1024*1024 + 1024,
+					Files:  map[string]int{"big.mp3": 1, "small.mp3": 1},
+				}}},
+			},
+			limit: 10,
+			want: []FileStats{
+				{Name: "big.mp3", Count: 1, Percent: 100},
+				{Name: "small.mp3", Count: 1, Percent: 100},
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -187,9 +251,9 @@ func TestComputeNodeStats(t *testing.T) {
 				}},
 			},
 			want: []NodeStats{
-				{Name: "node2", Volume: 20, Percent: 100},
-				{Name: "node1", Volume: 15, Percent: 75},
-				{Name: "node3", Volume: 15, Percent: 75},
+				{Name: "node2", Volume: 20, Percent: 100, HumanBytes: "0 B"},
+				{Name: "node1", Volume: 15, Percent: 75, HumanBytes: "0 B"},
+				{Name: "node3", Volume: 15, Percent: 75, HumanBytes: "0 B"},
 			},
 		},
 		{
@@ -201,7 +265,23 @@ func TestComputeNodeStats(t *testing.T) {
 				}},
 			},
 			want: []NodeStats{
-				{Name: "node1", Volume: 10, Percent: 100},
+				{Name: "node1", Volume: 10, Percent: 100, HumanBytes: "0 B"},
+			},
+		},
+		{
+			name: "bytes per node accumulated",
+			candles: []store.Candle{
+				{Nodes: map[string]store.Info{
+					"all":             {Volume: 20, Bytes: 2000},
+					"cdn.radio-t.com": {Volume: 20, Bytes: 2000},
+				}},
+				{Nodes: map[string]store.Info{
+					"all":             {Volume: 5, Bytes: 500},
+					"cdn.radio-t.com": {Volume: 5, Bytes: 500},
+				}},
+			},
+			want: []NodeStats{
+				{Name: "cdn.radio-t.com", Volume: 25, Bytes: 2500, HumanBytes: "2.44 KB", Percent: 100},
 			},
 		},
 	}

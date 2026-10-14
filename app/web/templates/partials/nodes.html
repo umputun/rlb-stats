@@ -6,7 +6,8 @@
         <thead>
             <tr>
                 <th>Node</th>
-                <th>Volume</th>
+                <th>Downloads</th>
+                <th>Bandwidth</th>
                 <th></th>
             </tr>
         </thead>
@@ -15,6 +16,7 @@
             <tr>
                 <td>{{.Name}}</td>
                 <td>{{.Volume}}</td>
+                <td>{{.HumanBytes}}</td>
                 <td><div class="bar-fill" style="width:{{.Percent}}%"></div></td>
             </tr>
             {{end}}

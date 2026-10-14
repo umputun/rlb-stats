@@ -14,33 +14,17 @@ services:
 
     volumes:
     - /tmp:/tmp
+    # Mount the directory, not the file. logrotate renames access.log to a new inode
+    # and a single-file bind mount would stay pinned to the old (rotated) inode, so
+    # rlb-stats would silently stop counting after the first rotation.
+    # - /var/log/nginx:/var/log/nginx:ro
 
     ports:
     - "8080:8080"
 
-  rlb:
-    # this server redirects traffic into itself
-    # and it's only purpose is generating raw data for rlb-stats,
-    # see README.md for details
-    image: umputun/rlb:master
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "5"
-    hostname: rlb
-    restart: always
-    container_name: rlb
-
-    ports:
-    - 7070:7070
-
-    volumes:
-    - ./rlb.config.yml:/srv/rlb.yml
-
-    environment:
-    - CONF=/srv/rlb.yml
-    - STATS=http://rlb-stats:8080/api/insert
-    - TIMEOUT=10s
-    - REFRESH=60s
-    - DEBUG=true
+    # Uncomment to turn on nginx tail mode. See README for the required log_format.
+    # environment:
+    # - NGINX_LOG=/var/log/nginx/access.log
+    # - NGINX_STATUS=200,206
+    # - NGINX_PATH=*.mp3
+    # - NGINX_HOST=cdn.radio-t.com

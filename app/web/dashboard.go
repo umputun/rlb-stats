@@ -13,32 +13,48 @@ import (
 
 // DashboardData holds all data needed to render the dashboard page
 type DashboardData struct {
-	Summaries   []SummaryData // 5 entries: 1h, 24h, 1w, 1m, all-time
-	ChartJSON   template.JS   // pre-built ECharts bar chart option
-	Files       []FileStats   // top files
-	Nodes       []NodeStats   // all nodes sorted by volume
-	HeatmapJSON template.JS   // pre-built ECharts heatmap option
-	Period      string        // currently selected period
+	Summaries   []SummaryData  // 5 entries: 1h, 24h, 1w, 1m, all-time
+	ChartJSON   template.JS    // pre-built ECharts bar chart option
+	Files       []FileStats    // top files
+	Nodes       []NodeStats    // all nodes sorted by volume
+	Countries   []CountryStats // top countries, nginx tail mode only
+	HeatmapJSON template.JS    // pre-built ECharts heatmap option
+	Period      string         // currently selected period
 }
 
-// SummaryData holds a period label and total download count
+// SummaryData holds a period label, total download count and total bytes transferred.
+// Bytes is zero on candles stored before nginx tail mode, so the number is only ever
+// non-zero for data collected via nginx tail mode.
 type SummaryData struct {
-	Label string
-	Count int
+	Label      string
+	Count      int
+	Bytes      int64
+	HumanBytes string // humanised Bytes for direct template use
 }
 
-// FileStats holds a filename with its count and percent of max for CSS bar widths
+// FileStats holds a filename with its count and percent of max for CSS bar widths.
+// Bytes-per-file is intentionally absent: see computeTopFiles for why a per-file
+// bandwidth figure would be an estimate, not a measurement.
 type FileStats struct {
 	Name    string
 	Count   int
 	Percent int // 0-100, relative to the top file
 }
 
-// NodeStats holds a node name with its volume and percent of max
+// NodeStats holds a node name with its volume, bytes, and percent of max
 type NodeStats struct {
-	Name    string
-	Volume  int
-	Percent int // 0-100, relative to the top node
+	Name       string
+	Volume     int
+	Bytes      int64
+	HumanBytes string
+	Percent    int // 0-100, relative to the top node
+}
+
+// CountryStats holds a country code with its download count and percent of max
+type CountryStats struct {
+	Code    string
+	Count   int
+	Percent int // 0-100, relative to the top country
 }
 
 // HeatmapCell holds a single cell in the 24x7 heatmap grid
@@ -57,70 +73,153 @@ func firstIndexSince(candles []store.Candle, from time.Time) int {
 	})
 }
 
-// computeSummary sums the "all" node Volume across candles
-func computeSummary(candles []store.Candle) int {
-	total := 0
+// computeSummary sums the "all" node Volume and Bytes across candles. Bytes is reported
+// alongside Count so the summary cards can show both without a second pass over candles.
+func computeSummary(candles []store.Candle) (count int, bytesSum int64) {
 	for _, c := range candles {
 		if info, ok := c.Nodes[store.AllNode]; ok {
-			total += info.Volume
+			count += info.Volume
+			bytesSum += info.Bytes
 		}
 	}
-	return total
+	return count, bytesSum
+}
+
+// humanBytes formats a byte count with units up to EB using 1024 as the divisor.
+// Zero returns "0 B" so templates don't need a nil check. Small values keep three
+// significant figures where it reads naturally; larger units use one decimal place.
+func humanBytes(n int64) string {
+	if n < 0 {
+		return "0 B"
+	}
+	const unit = 1024
+	if n < unit {
+		return formatBytes(float64(n), "B", 0)
+	}
+	div, exp := int64(unit), 0
+	for size := n / unit; size >= unit; size /= unit {
+		div *= unit
+		exp++
+	}
+	units := []string{"KB", "MB", "GB", "TB", "PB", "EB"}
+	if exp >= len(units) {
+		exp = len(units) - 1
+	}
+	return formatBytes(float64(n)/float64(div), units[exp], 2)
+}
+
+// formatBytes handles the "do we need a decimal point" bit of humanBytes so a 0-decimal
+// unit (B) and a 2-decimal unit (MB) share one call site.
+func formatBytes(v float64, unit string, decimals int) string {
+	if decimals == 0 {
+		return fmt.Sprintf("%d %s", int64(v), unit)
+	}
+	return fmt.Sprintf("%.*f %s", decimals, v, unit)
 }
 
 // computeTopFiles aggregates file download counts from the "all" node across candles,
-// sorts descending, and returns top N with percent-of-max for CSS bar widths
+// sorts descending, and returns top N with percent-of-max for CSS bar widths. Per-file
+// bytes is intentionally NOT computed here: the storage keeps bytes per-candle and
+// Files only as counts, so a per-file bandwidth figure would be a proportional estimate
+// and misleading (one 100 MB download and one 1 KB range in the same minute would show
+// as ~50 MB each). Per-file bandwidth needs a per-file bytes map on Info; left for a
+// follow-up PR. Per-vhost and total bandwidth stay exact.
 func computeTopFiles(candles []store.Candle, limit int) []FileStats {
+	return topByKey(candles, limit,
+		func(info store.Info) map[string]int { return info.Files },
+		func(key string, count, percent int) FileStats {
+			return FileStats{Name: key, Count: count, Percent: percent}
+		},
+	)
+}
+
+// computeTopCountries sums per-country download counts from the "all" node across
+// candles. Empty country codes are already dropped at parse time, so no further
+// filtering is needed here.
+func computeTopCountries(candles []store.Candle, limit int) []CountryStats {
+	return topByKey(candles, limit,
+		func(info store.Info) map[string]int { return info.Countries },
+		func(key string, count, percent int) CountryStats {
+			return CountryStats{Code: key, Count: count, Percent: percent}
+		},
+	)
+}
+
+// topByKey is the shared body of computeTopFiles and computeTopCountries. getMap picks
+// which map to count by (Files or Countries); build turns a key, count, percent triple
+// into the typed row the UI wants.
+func topByKey[T any](
+	candles []store.Candle,
+	limit int,
+	getMap func(store.Info) map[string]int,
+	build func(key string, count, percent int) T,
+) []T {
 	counts := map[string]int{}
 	for _, c := range candles {
 		if info, ok := c.Nodes[store.AllNode]; ok {
-			for name, count := range info.Files {
-				counts[name] += count
+			for k, v := range getMap(info) {
+				counts[k] += v
 			}
 		}
 	}
 
-	files := make([]FileStats, 0, len(counts))
-	for name, count := range counts {
-		files = append(files, FileStats{Name: name, Count: count})
+	type kv struct {
+		key   string
+		count int
 	}
-	sort.Slice(files, func(i, j int) bool {
-		if files[i].Count != files[j].Count {
-			return files[i].Count > files[j].Count
+	rows := make([]kv, 0, len(counts))
+	for k, c := range counts {
+		rows = append(rows, kv{k, c})
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].count != rows[j].count {
+			return rows[i].count > rows[j].count
 		}
-		return files[i].Name < files[j].Name
+		return rows[i].key < rows[j].key
 	})
-
-	if limit > 0 && len(files) > limit {
-		files = files[:limit]
+	if limit > 0 && len(rows) > limit {
+		rows = rows[:limit]
 	}
 
-	if len(files) > 0 {
-		maxCount := files[0].Count
-		for i := range files {
-			files[i].Percent = files[i].Count * 100 / maxCount
+	result := make([]T, len(rows))
+	maxCount := 0
+	if len(rows) > 0 {
+		maxCount = rows[0].count
+	}
+	for i, r := range rows {
+		pct := 0
+		if maxCount > 0 {
+			pct = r.count * 100 / maxCount
 		}
+		result[i] = build(r.key, r.count, pct)
 	}
-
-	return files
+	return result
 }
 
-// computeNodeStats sums per-node Volume (excluding "all"), sorts descending,
-// and computes percent-of-max
+// computeNodeStats sums per-node Volume and Bytes (excluding "all"), sorts descending,
+// and computes percent-of-max. Per-node Bytes was added for nginx tail mode: with nginx
+// vhosts as nodes (radio-t.com, cdn.radio-t.com), per-vhost bandwidth is useful.
 func computeNodeStats(candles []store.Candle) []NodeStats {
 	volumes := map[string]int{}
+	bytesPerNode := map[string]int64{}
 	for _, c := range candles {
 		for name, info := range c.Nodes {
 			if name == store.AllNode {
 				continue
 			}
 			volumes[name] += info.Volume
+			bytesPerNode[name] += info.Bytes
 		}
 	}
 
 	nodes := make([]NodeStats, 0, len(volumes))
 	for name, vol := range volumes {
-		nodes = append(nodes, NodeStats{Name: name, Volume: vol})
+		nodes = append(nodes, NodeStats{
+			Name:       name,
+			Volume:     vol,
+			Bytes:      bytesPerNode[name],
+			HumanBytes: humanBytes(bytesPerNode[name]),
+		})
 	}
 	sort.Slice(nodes, func(i, j int) bool {
 		if nodes[i].Volume != nodes[j].Volume {

@@ -13,7 +13,8 @@ type Aggregator struct {
 }
 
 // Store LogRecord into temp storage and return Candle when minute change,
-// counting multiple entries with same FromIP and FileName as single data point
+// counting multiple entries with same FromIP and FileName as single data point.
+// Bytes from deduplicated entries are still summed into the candle's bytes totals.
 func (p *Aggregator) Store(entry LogRecord) (minuteCandle Candle, ok bool) {
 
 	// drop seconds and nanoseconds from log date to match candle's 1min resolution
@@ -57,14 +58,17 @@ type fileIP struct {
 	ip   string
 }
 
-// buildCandle collapses buffered entries into a single candle, counting each
-// unique file+ip pair once
+// buildCandle collapses buffered entries into a single candle. the first entry for each
+// unique (file, ip) pair increments Volume/Files/Countries; subsequent entries for the
+// same pair add their Bytes only, so range-request bursts from one listener produce one
+// download and accurate bandwidth.
 func buildCandle(entries []LogRecord) Candle {
 	minuteCandle := NewCandle()
 	deduplicate := map[fileIP]struct{}{}
 	for _, entry := range entries {
 		key := fileIP{file: entry.FileName, ip: entry.FromIP}
 		if _, dup := deduplicate[key]; dup {
+			minuteCandle.AddBytes(entry)
 			continue
 		}
 		minuteCandle.Update(entry)
