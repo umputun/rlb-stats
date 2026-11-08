@@ -1,4 +1,4 @@
-# rlb-stats [![Build Status](https://github.com/umputun/rlb-stats/workflows/CI%20Build/badge.svg)](https://github.com/umputun/rlb-stats/actions?query=workflow%3A%22CI+Build%22) [![Coverage Status](https://coveralls.io/repos/github/umputun/rlb-stats/badge.svg?branch=master)](https://coveralls.io/github/umputun/rlb-stats?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/umputun/rlb-stats)](https://goreportcard.com/report/github.com/umputun/rlb-stats) [![Docker Automated build](https://img.shields.io/docker/automated/jrottenberg/ffmpeg.svg)](https://hub.docker.com/r/umputun/rlb-stats/)
+# rlb-stats [![Build Status](https://github.com/umputun/rlb-stats/workflows/CI%20Build/badge.svg)](https://github.com/umputun/rlb-stats/actions?query=workflow%3A%22CI+Build%22) [![Coverage Status](https://coveralls.io/repos/github/umputun/rlb-stats/badge.svg?branch=master)](https://coveralls.io/github/umputun/rlb-stats?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/umputun/rlb-stats)](https://goreportcard.com/report/github.com/umputun/rlb-stats)
 
 Download stats collector with REST interface and WEB UI. Two ingest modes:
 
@@ -26,7 +26,7 @@ docker run --rm \
     -v /var/log/nginx:/var/log/nginx:ro \
     -v /tmp:/tmp \
     -e NGINX_LOG=/var/log/nginx/access.log \
-    umputun/rlb-stats:latest
+    ghcr.io/umputun/rlb-stats:master
 ```
 
 Mount the directory, not the file: logrotate renames `access.log` and nginx reopens a new file with a new inode. A single-file bind mount is pinned to the host inode at container start, so after the first rotation rlb-stats would keep reading the old (now rotated-away) inode and silently stop counting. With the directory mount, the tailer's inode-change detection takes over.

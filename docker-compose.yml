@@ -2,7 +2,7 @@ services:
 
   rlb-stats:
     build: .
-    image: umputun/rlb-stats:latest
+    image: ghcr.io/umputun/rlb-stats:master
     hostname: rlb-stats
     container_name: rlb-stats
 
